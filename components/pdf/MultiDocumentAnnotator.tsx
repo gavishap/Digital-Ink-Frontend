@@ -197,10 +197,26 @@ export function MultiDocumentAnnotator({
           try {
             const jsonData = JSON.parse(savedJson);
             console.log(`[RENDER] Loading JSON with ${jsonData.objects?.length || 0} objects`);
-            fabricCanvas.loadFromJSON(jsonData, () => {
-              console.log(`[RENDER] loadFromJSON callback fired, objects on canvas: ${fabricCanvas.getObjects().length}`);
-              fabricCanvas.renderAll();
-            });
+            
+            // Fabric.js v6+ uses Promise-based API
+            const loadResult = fabricCanvas.loadFromJSON(jsonData);
+            if (loadResult && typeof loadResult.then === 'function') {
+              // It's a Promise
+              loadResult.then(() => {
+                console.log(`[RENDER] Promise resolved, objects on canvas: ${fabricCanvas.getObjects().length}`);
+                fabricCanvas.renderAll();
+              });
+            } else {
+              // Fallback: manually add objects if loadFromJSON didn't work
+              console.log(`[RENDER] loadFromJSON returned:`, loadResult);
+              if (jsonData.objects && jsonData.objects.length > 0) {
+                fabric.util.enlivenObjects(jsonData.objects).then((objects: fabric.Object[]) => {
+                  console.log(`[RENDER] Enlivened ${objects.length} objects`);
+                  objects.forEach(obj => fabricCanvas.add(obj));
+                  fabricCanvas.renderAll();
+                });
+              }
+            }
           } catch (e) {
             console.error('Error loading canvas JSON:', e);
           }
