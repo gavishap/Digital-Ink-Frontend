@@ -64,6 +64,9 @@ export function MultiDocumentAnnotator({
   const [tool, setTool] = useState<'pen' | 'eraser' | 'select'>('pen');
   // Track current page per doc to trigger re-renders
   const [renderKey, setRenderKey] = useState(0);
+  
+  // Ref to store canvas JSON states - avoids stale closure issues
+  const canvasJsonRef = useRef<Map<string, Map<number, string>>>(new Map());
 
   // Load all PDFs
   useEffect(() => {
@@ -116,21 +119,6 @@ export function MultiDocumentAnnotator({
         const pageContainer = document.getElementById(`page-container-${activeDocId}`);
         if (!pageContainer) return;
 
-        // Save current fabric canvas state before switching (if exists)
-        const existingFabricCanvas = currentDocState.pageData[pageIndex]?.fabricCanvas;
-        if (existingFabricCanvas) {
-          // Store the JSON state
-          const jsonState = JSON.stringify(existingFabricCanvas.toJSON());
-          setDocumentStates(prev => {
-            const newStates = new Map(prev);
-            const docState = newStates.get(activeDocId);
-            if (docState) {
-              docState.pageData[pageIndex].canvasJson = jsonState;
-            }
-            return newStates;
-          });
-        }
-
         // Clear the container
         pageContainer.innerHTML = '';
 
@@ -179,10 +167,11 @@ export function MultiDocumentAnnotator({
         fabricCanvas.freeDrawingBrush.color = tool === 'eraser' ? '#FFFFFF' : brushColor;
         fabricCanvas.freeDrawingBrush.width = tool === 'eraser' ? 20 : brushWidth;
 
-        // Get saved JSON from current state before overwriting
-        const savedJson = currentDocState.pageData[pageIndex]?.canvasJson;
+        // Get saved JSON from ref (not state - avoids stale closure)
+        const docJsonMap = canvasJsonRef.current.get(activeDocId);
+        const savedJson = docJsonMap?.get(pageIndex);
         
-        // Update state with new canvas reference first
+        // Update state with new canvas reference
         setDocumentStates(prev => {
           const newStates = new Map(prev);
           const docState = newStates.get(activeDocId);
@@ -196,10 +185,10 @@ export function MultiDocumentAnnotator({
           return newStates;
         });
 
-        // Restore previous canvas state if exists (after state update)
+        // Restore previous canvas state if exists
         if (savedJson) {
           try {
-            const jsonData = typeof savedJson === 'string' ? JSON.parse(savedJson) : savedJson;
+            const jsonData = JSON.parse(savedJson);
             fabricCanvas.loadFromJSON(jsonData, () => {
               fabricCanvas.renderAll();
             });
@@ -208,9 +197,15 @@ export function MultiDocumentAnnotator({
           }
         }
         
-        // Auto-save canvas state on any path created (drawing)
-        fabricCanvas.on('path:created', () => {
+        // Helper to save canvas state to ref
+        const saveCanvasState = () => {
           const jsonState = JSON.stringify(fabricCanvas.toJSON());
+          if (!canvasJsonRef.current.has(activeDocId)) {
+            canvasJsonRef.current.set(activeDocId, new Map());
+          }
+          canvasJsonRef.current.get(activeDocId)!.set(pageIndex, jsonState);
+          
+          // Also update React state for other components that need it
           setDocumentStates(prev => {
             const newStates = new Map(prev);
             const docState = newStates.get(activeDocId);
@@ -219,32 +214,12 @@ export function MultiDocumentAnnotator({
             }
             return newStates;
           });
-        });
+        };
         
-        // Auto-save on object modified/removed
-        fabricCanvas.on('object:modified', () => {
-          const jsonState = JSON.stringify(fabricCanvas.toJSON());
-          setDocumentStates(prev => {
-            const newStates = new Map(prev);
-            const docState = newStates.get(activeDocId);
-            if (docState && docState.pageData[pageIndex]) {
-              docState.pageData[pageIndex].canvasJson = jsonState;
-            }
-            return newStates;
-          });
-        });
-        
-        fabricCanvas.on('object:removed', () => {
-          const jsonState = JSON.stringify(fabricCanvas.toJSON());
-          setDocumentStates(prev => {
-            const newStates = new Map(prev);
-            const docState = newStates.get(activeDocId);
-            if (docState && docState.pageData[pageIndex]) {
-              docState.pageData[pageIndex].canvasJson = jsonState;
-            }
-            return newStates;
-          });
-        });
+        // Auto-save canvas state on any drawing/modification
+        fabricCanvas.on('path:created', saveCanvasState);
+        fabricCanvas.on('object:modified', saveCanvasState);
+        fabricCanvas.on('object:removed', saveCanvasState);
       } catch (err) {
         console.error('Error rendering page:', err);
       }
@@ -272,9 +247,16 @@ export function MultiDocumentAnnotator({
     const currentPageIndex = currentDocState.currentPage - 1;
     const currentCanvas = currentDocState.pageData[currentPageIndex]?.fabricCanvas;
     
-    // Save current canvas state before switching
+    // Save current canvas state to REF before switching (critical for persistence)
     if (currentCanvas) {
       const jsonState = JSON.stringify(currentCanvas.toJSON());
+      // Save to ref first (immediate, no async issues)
+      if (!canvasJsonRef.current.has(activeDocId)) {
+        canvasJsonRef.current.set(activeDocId, new Map());
+      }
+      canvasJsonRef.current.get(activeDocId)!.set(currentPageIndex, jsonState);
+      
+      // Then update state
       setDocumentStates(prev => {
         const newStates = new Map(prev);
         const docState = newStates.get(activeDocId);
