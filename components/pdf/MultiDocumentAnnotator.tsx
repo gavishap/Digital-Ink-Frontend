@@ -470,201 +470,296 @@ export function MultiDocumentAnnotator({
     .slice(0, documents.findIndex(d => d.id === activeDocId))
     .reduce((sum, d) => sum + (documentStates.get(d.id)?.pageCount || 0), 0) + (currentDocState?.currentPage || 0);
 
+  // Loading state
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-100">
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-stone-100 via-amber-50/30 to-stone-100">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-lg font-medium text-gray-700">Loading documents...</p>
+          <div className="relative w-16 h-16 mx-auto mb-6">
+            <div className="absolute inset-0 rounded-full border-4 border-stone-200"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-amber-600 border-t-transparent animate-spin"></div>
+          </div>
+          <p className="text-lg font-light tracking-wide text-stone-600">Loading documents...</p>
         </div>
       </div>
     );
   }
 
+  // Error state
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-100">
-        <div className="text-center text-red-600">
-          <p className="text-lg font-medium">{error}</p>
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-stone-100 via-amber-50/30 to-stone-100">
+        <div className="text-center bg-white/80 backdrop-blur-sm rounded-2xl p-10 shadow-xl shadow-stone-200/50 border border-stone-200/50">
+          <div className="w-14 h-14 mx-auto mb-5 rounded-full bg-red-50 flex items-center justify-center">
+            <svg className="w-7 h-7 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <p className="text-lg font-medium text-stone-800">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100">
-      {/* Top Toolbar */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm">
-        <div className="flex items-center space-x-4">
-          {/* Logo */}
-          <div className="flex items-center space-x-2">
-            <div className="p-2 bg-blue-600 rounded-lg">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+    <div className="flex flex-col h-screen bg-gradient-to-br from-stone-100 via-amber-50/20 to-stone-100">
+      
+      {/* ═══════════════════════════════════════════════════════════════════════════
+          HEADER - Refined toolbar with elegant spacing
+      ═══════════════════════════════════════════════════════════════════════════ */}
+      <header className="bg-white/95 backdrop-blur-md border-b border-stone-200/60 shadow-sm shadow-stone-200/30">
+        <div className="px-6 py-4 flex items-center justify-between">
+          
+          {/* Logo & Brand */}
+          <div className="flex items-center gap-8">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 shadow-lg shadow-amber-500/25 flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-lg font-semibold tracking-tight text-stone-800">Digital Ink</h1>
+                <p className="text-xs text-stone-400 font-medium tracking-wide">Patient Intake System</p>
+              </div>
             </div>
-            <span className="font-semibold text-gray-900">Digital Ink</span>
+
+            {/* Divider */}
+            <div className="h-10 w-px bg-gradient-to-b from-transparent via-stone-300 to-transparent"></div>
+
+            {/* ─────────────────────────────────────────────────────────────────────
+                DRAWING TOOLS - Grouped with labels
+            ───────────────────────────────────────────────────────────────────── */}
+            <div className="flex items-center gap-6">
+              {/* Tool Buttons */}
+              <div className="flex items-center gap-1.5 bg-stone-100/80 rounded-xl p-1.5">
+                <button
+                  onClick={() => setTool('pen')}
+                  className={`group relative flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 ${
+                    tool === 'pen' 
+                      ? 'bg-white text-amber-700 shadow-md shadow-stone-200/50' 
+                      : 'text-stone-500 hover:text-stone-700 hover:bg-white/50'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                  <span>Pen</span>
+                </button>
+                
+                <button
+                  onClick={() => setTool('eraser')}
+                  className={`group relative flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 ${
+                    tool === 'eraser' 
+                      ? 'bg-white text-amber-700 shadow-md shadow-stone-200/50' 
+                      : 'text-stone-500 hover:text-stone-700 hover:bg-white/50'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  <span>Eraser</span>
+                </button>
+                
+                <button
+                  onClick={() => setTool('select')}
+                  className={`group relative flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 ${
+                    tool === 'select' 
+                      ? 'bg-white text-amber-700 shadow-md shadow-stone-200/50' 
+                      : 'text-stone-500 hover:text-stone-700 hover:bg-white/50'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                  </svg>
+                  <span>Select</span>
+                </button>
+              </div>
+
+              {/* Color Picker */}
+              <div className="flex items-center gap-3">
+                <label className="text-xs font-semibold uppercase tracking-wider text-stone-400">Color</label>
+                <div className="relative">
+                  <input
+                    type="color"
+                    value={brushColor}
+                    onChange={(e) => setBrushColor(e.target.value)}
+                    className="w-9 h-9 rounded-lg cursor-pointer border-2 border-stone-200 hover:border-stone-300 transition-colors"
+                    style={{ backgroundColor: brushColor }}
+                  />
+                </div>
+              </div>
+
+              {/* Size Slider */}
+              <div className="flex items-center gap-3">
+                <label className="text-xs font-semibold uppercase tracking-wider text-stone-400">Size</label>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-stone-400 w-4 text-right">{brushWidth}</span>
+                  <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    value={brushWidth}
+                    onChange={(e) => setBrushWidth(Number(e.target.value))}
+                    className="w-24 h-1.5 bg-stone-200 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber-500 [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-pointer hover:[&::-webkit-slider-thumb]:bg-amber-600 [&::-webkit-slider-thumb]:transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Clear Button */}
+              <button
+                onClick={handleClear}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-stone-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                <span>Clear Page</span>
+              </button>
+            </div>
           </div>
 
-          <div className="h-6 w-px bg-gray-300"></div>
-
-          {/* Drawing Tools */}
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setTool('pen')}
-              className={`p-2 rounded-lg ${tool === 'pen' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-              title="Pen"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
-            </button>
-            <button
-              onClick={() => setTool('eraser')}
-              className={`p-2 rounded-lg ${tool === 'eraser' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-              title="Eraser"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </button>
-            <button
-              onClick={() => setTool('select')}
-              className={`p-2 rounded-lg ${tool === 'select' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
-              title="Select"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
-              </svg>
-            </button>
-          </div>
-
-          <div className="h-6 w-px bg-gray-300"></div>
-
-          {/* Color & Size */}
-          <div className="flex items-center space-x-2">
-            <label className="text-sm text-gray-600">Color:</label>
-            <input
-              type="color"
-              value={brushColor}
-              onChange={(e) => setBrushColor(e.target.value)}
-              className="w-8 h-8 rounded cursor-pointer"
-            />
-          </div>
-          <div className="flex items-center space-x-2">
-            <label className="text-sm text-gray-600">Size:</label>
-            <input
-              type="range"
-              min="1"
-              max="10"
-              value={brushWidth}
-              onChange={(e) => setBrushWidth(Number(e.target.value))}
-              className="w-20"
-            />
-          </div>
-
+          {/* ─────────────────────────────────────────────────────────────────────
+              SAVE & ANALYZE BUTTON - Prominent CTA
+          ───────────────────────────────────────────────────────────────────── */}
           <button
-            onClick={handleClear}
-            className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+            onClick={handleSaveAndAnalyze}
+            disabled={isAnalyzing}
+            className={`group relative flex items-center gap-3 px-7 py-3 rounded-xl font-semibold text-white transition-all duration-300 ${
+              isAnalyzing 
+                ? 'bg-emerald-400 cursor-not-allowed' 
+                : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/40 hover:-translate-y-0.5'
+            }`}
           >
-            Clear Page
+            {isAnalyzing ? (
+              <>
+                <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                <span>
+                  {analysisProgress 
+                    ? `Analyzing... ${analysisProgress.percentage}%`
+                    : 'Preparing...'}
+                </span>
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Save & Analyze</span>
+              </>
+            )}
           </button>
         </div>
+      </header>
 
-        {/* Save & Analyze Button */}
-        <button
-          onClick={handleSaveAndAnalyze}
-          disabled={isAnalyzing}
-          className={`px-6 py-2 rounded-lg font-medium text-white flex items-center space-x-2 ${
-            isAnalyzing ? 'bg-green-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
-          }`}
-        >
-          {isAnalyzing ? (
-            <>
-              <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              <span>
-                {analysisProgress 
-                  ? `Analyzing... ${analysisProgress.percentage}%`
-                  : 'Preparing...'}
-              </span>
-            </>
-          ) : (
-            <>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span>Save & Analyze</span>
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Document Tabs */}
-      <div className="bg-white border-b border-gray-200 px-4">
-        <div className="flex space-x-1">
+      {/* ═══════════════════════════════════════════════════════════════════════════
+          DOCUMENT TABS - Elegant tab navigation
+      ═══════════════════════════════════════════════════════════════════════════ */}
+      <nav className="bg-white/80 backdrop-blur-sm border-b border-stone-200/40 px-6">
+        <div className="flex gap-2 -mb-px">
           {documents.map((doc) => {
             const docState = documentStates.get(doc.id);
+            const isActive = activeDocId === doc.id;
             return (
               <button
                 key={doc.id}
                 onClick={() => setActiveDocId(doc.id)}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeDocId === doc.id
-                    ? 'border-blue-600 text-blue-600 bg-blue-50'
-                    : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                className={`group relative px-6 py-4 text-sm font-medium transition-all duration-200 ${
+                  isActive
+                    ? 'text-amber-700'
+                    : 'text-stone-500 hover:text-stone-700'
                 }`}
               >
-                {doc.name}
-                {docState && (
-                  <span className="ml-2 text-xs text-gray-400">
-                    ({docState.pageCount} pages)
-                  </span>
-                )}
+                <span className="relative z-10 flex items-center gap-2">
+                  {doc.name}
+                  {docState && (
+                    <span className={`text-xs px-2 py-0.5 rounded-full transition-colors ${
+                      isActive 
+                        ? 'bg-amber-100 text-amber-700' 
+                        : 'bg-stone-100 text-stone-400 group-hover:bg-stone-200'
+                    }`}>
+                      {docState.pageCount}
+                    </span>
+                  )}
+                </span>
+                {/* Active indicator */}
+                <div className={`absolute bottom-0 left-0 right-0 h-0.5 rounded-full transition-all duration-300 ${
+                  isActive 
+                    ? 'bg-gradient-to-r from-amber-400 to-amber-500' 
+                    : 'bg-transparent group-hover:bg-stone-200'
+                }`}></div>
               </button>
             );
           })}
         </div>
-      </div>
+      </nav>
 
-      {/* Page Navigation */}
+      {/* ═══════════════════════════════════════════════════════════════════════════
+          PAGE NAVIGATION - Clean pagination controls
+      ═══════════════════════════════════════════════════════════════════════════ */}
       {currentDocState && (
-        <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-center space-x-4">
-          <button
-            onClick={() => goToPage(currentDocState.currentPage - 1)}
-            disabled={currentDocState.currentPage === 1}
-            className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <span className="text-sm font-medium text-gray-700">
-            Page {currentDocState.currentPage} of {currentDocState.pageCount}
-            <span className="text-gray-400 ml-2">
-              (Overall: {currentGlobalPage} of {totalPages})
-            </span>
-          </span>
-          <button
-            onClick={() => goToPage(currentDocState.currentPage + 1)}
-            disabled={currentDocState.currentPage === currentDocState.pageCount}
-            className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
+        <div className="bg-white/60 backdrop-blur-sm border-b border-stone-200/40 px-6 py-3">
+          <div className="flex items-center justify-center gap-6">
+            {/* Previous Page */}
+            <button
+              onClick={() => goToPage(currentDocState.currentPage - 1)}
+              disabled={currentDocState.currentPage === 1}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-stone-600 hover:text-stone-800 hover:bg-stone-100 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-all duration-200"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span className="text-sm font-medium">Previous</span>
+            </button>
+
+            {/* Page Indicator */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-sm border border-stone-200/60">
+                <span className="text-sm font-semibold text-stone-800">
+                  Page {currentDocState.currentPage}
+                </span>
+                <span className="text-stone-300">/</span>
+                <span className="text-sm text-stone-500">
+                  {currentDocState.pageCount}
+                </span>
+              </div>
+              <div className="text-xs text-stone-400 font-medium">
+                Overall: {currentGlobalPage} of {totalPages}
+              </div>
+            </div>
+
+            {/* Next Page */}
+            <button
+              onClick={() => goToPage(currentDocState.currentPage + 1)}
+              disabled={currentDocState.currentPage === currentDocState.pageCount}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-stone-600 hover:text-stone-800 hover:bg-stone-100 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-all duration-200"
+            >
+              <span className="text-sm font-medium">Next</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
         </div>
       )}
 
-      {/* PDF Canvas Area */}
-      <div ref={containerRef} className="flex-1 overflow-auto bg-gray-200 p-4 flex justify-center">
-        <div className="bg-white shadow-lg">
+      {/* ═══════════════════════════════════════════════════════════════════════════
+          PDF CANVAS AREA - Document viewing area with subtle styling
+      ═══════════════════════════════════════════════════════════════════════════ */}
+      <main 
+        ref={containerRef} 
+        className="flex-1 overflow-auto p-8 flex justify-center items-start"
+        style={{
+          background: 'linear-gradient(180deg, rgba(245,243,240,0.8) 0%, rgba(250,248,245,1) 100%)',
+        }}
+      >
+        <div className="bg-white rounded-lg shadow-2xl shadow-stone-300/40 ring-1 ring-stone-200/50">
           <div id={`page-container-${activeDocId}`} className="relative"></div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
