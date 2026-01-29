@@ -214,6 +214,39 @@ export async function analyzeDocumentImages(
 }
 
 /**
+ * Save annotated PDF documents to the backend
+ * These are the complete documents with all pages and annotations
+ */
+export async function saveAnnotatedPdfs(
+  pdfs: { documentName: string; blob: Blob }[],
+  jobId?: string,
+): Promise<{ success: boolean; savedFiles: string[] }> {
+  const formData = new FormData();
+  
+  pdfs.forEach((pdf, index) => {
+    const filename = `${pdf.documentName.replace(/\s+/g, '_')}_annotated.pdf`;
+    const file = new File([pdf.blob], filename, { type: 'application/pdf' });
+    formData.append('files', file);
+  });
+  
+  if (jobId) {
+    formData.append('job_id', jobId);
+  }
+  
+  const response = await fetch(`${API_BASE_URL}/api/save-annotated-pdfs`, {
+    method: 'POST',
+    body: formData,
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to save annotated PDFs');
+  }
+  
+  return response.json();
+}
+
+/**
  * Get job status
  */
 export async function getJobStatus(jobId: string): Promise<JobStatus> {

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as fabric from 'fabric';
+import { PDFDocument } from 'pdf-lib';
 
 interface DocumentConfig {
   id: string;
@@ -16,9 +17,20 @@ interface AnnotatedPage {
   blob: Blob;
 }
 
+interface AnnotatedPdf {
+  documentId: string;
+  documentName: string;
+  blob: Blob;
+}
+
+interface SaveAndAnalyzeData {
+  annotatedPages: Map<string, AnnotatedPage[]>;  // For AI analysis (only pages with annotations)
+  completePdfs: AnnotatedPdf[];                   // Complete documents with all pages + annotations
+}
+
 interface MultiDocumentAnnotatorProps {
   documents: DocumentConfig[];
-  onSaveAndAnalyze: (documentPages: Map<string, AnnotatedPage[]>) => void;
+  onSaveAndAnalyze: (data: SaveAndAnalyzeData) => void;
   isAnalyzing?: boolean;
   analysisProgress?: { current: number; total: number; percentage: number; stage?: string };
 }
@@ -274,7 +286,106 @@ export function MultiDocumentAnnotator({
     return false;
   };
 
-  // Save and analyze only pages with annotations
+  // Helper function to render a page with annotations to a canvas
+  const renderPageWithAnnotations = async (
+    pdfDoc: any,
+    pageNumber: number,
+    pageData: PageData | null,
+    scale: number = 1.5,
+  ): Promise<HTMLCanvasElement> => {
+    const page = await pdfDoc.getPage(pageNumber);
+    const viewport = page.getViewport({ scale });
+
+    const combinedCanvas = document.createElement('canvas');
+    combinedCanvas.width = viewport.width;
+    combinedCanvas.height = viewport.height;
+    const ctx = combinedCanvas.getContext('2d')!;
+
+    // Render PDF page
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    // Overlay annotations if present
+    if (pageData?.fabricCanvas) {
+      const annotationDataUrl = pageData.fabricCanvas.toDataURL({ format: 'png', multiplier: 1 });
+      const annotationImg = new Image();
+      await new Promise<void>((resolve) => {
+        annotationImg.onload = () => {
+          ctx.drawImage(annotationImg, 0, 0);
+          resolve();
+        };
+        annotationImg.src = annotationDataUrl;
+      });
+    } else if (pageData?.canvasJson) {
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = viewport.width;
+      tempCanvas.height = viewport.height;
+      const tempFabric = new fabric.Canvas(tempCanvas, {
+        width: viewport.width,
+        height: viewport.height,
+      });
+      await new Promise<void>((resolve) => {
+        tempFabric.loadFromJSON(pageData.canvasJson, () => {
+          const annotationDataUrl = tempFabric.toDataURL({ format: 'png', multiplier: 1 });
+          const annotationImg = new Image();
+          annotationImg.onload = () => {
+            ctx.drawImage(annotationImg, 0, 0);
+            tempFabric.dispose();
+            resolve();
+          };
+          annotationImg.src = annotationDataUrl;
+        });
+      });
+    }
+
+    return combinedCanvas;
+  };
+
+  // Generate a complete PDF with all pages and annotations
+  const generateCompletePdf = async (
+    doc: DocumentConfig,
+    docState: DocumentState,
+  ): Promise<Blob> => {
+    // Fetch the original PDF
+    const originalPdfBytes = await fetch(doc.pdfUrl).then(res => res.arrayBuffer());
+    const pdfLibDoc = await PDFDocument.load(originalPdfBytes);
+    const pages = pdfLibDoc.getPages();
+
+    // Process each page
+    for (let i = 0; i < pages.length; i++) {
+      const page = pages[i];
+      const pageData = docState.pageData[i];
+      
+      // Only add annotation overlay if this page has annotations
+      if (pageHasAnnotations(pageData)) {
+        // Render the page with annotations to a canvas
+        const canvas = await renderPageWithAnnotations(docState.pdfDoc, i + 1, pageData);
+        
+        // Convert canvas to PNG
+        const pngDataUrl = canvas.toDataURL('image/png');
+        const pngBytes = await fetch(pngDataUrl).then(res => res.arrayBuffer());
+        
+        // Embed the image and draw it over the page
+        const pngImage = await pdfLibDoc.embedPng(pngBytes);
+        
+        // Scale to fit page dimensions
+        const pageWidth = page.getWidth();
+        const pageHeight = page.getHeight();
+        
+        page.drawImage(pngImage, {
+          x: 0,
+          y: 0,
+          width: pageWidth,
+          height: pageHeight,
+        });
+      }
+    }
+
+    // Save the PDF
+    const pdfBytes = await pdfLibDoc.save();
+    return new Blob([pdfBytes], { type: 'application/pdf' });
+  };
+
+  // Save and analyze - generates both annotated pages for AI and complete PDFs for storage
   const handleSaveAndAnalyze = useCallback(async () => {
     // First, save the current page's canvas state
     if (currentDocState) {
@@ -293,6 +404,7 @@ export function MultiDocumentAnnotator({
       }
     }
 
+    // 1. Generate annotated pages for AI analysis (only pages with annotations)
     const allDocumentPages = new Map<string, AnnotatedPage[]>();
 
     for (const doc of documents) {
@@ -304,57 +416,12 @@ export function MultiDocumentAnnotator({
       for (let i = 1; i <= docState.pageCount; i++) {
         const pageData = docState.pageData[i - 1];
         
-        // Skip pages without annotations
+        // Skip pages without annotations for AI analysis
         if (!pageHasAnnotations(pageData)) continue;
 
-        const page = await docState.pdfDoc.getPage(i);
-        const scale = 1.5;
-        const viewport = page.getViewport({ scale });
-
-        const combinedCanvas = document.createElement('canvas');
-        combinedCanvas.width = viewport.width;
-        combinedCanvas.height = viewport.height;
-        const ctx = combinedCanvas.getContext('2d');
-        if (!ctx) continue;
-
-        await page.render({ canvasContext: ctx, viewport }).promise;
-
-        // Overlay annotations from saved state or current canvas
-        if (pageData?.fabricCanvas) {
-          const annotationDataUrl = pageData.fabricCanvas.toDataURL({ format: 'png', multiplier: 1 });
-          const annotationImg = new Image();
-          await new Promise<void>((resolve) => {
-            annotationImg.onload = () => {
-              ctx.drawImage(annotationImg, 0, 0);
-              resolve();
-            };
-            annotationImg.src = annotationDataUrl;
-          });
-        } else if (pageData?.canvasJson) {
-          // If we have saved JSON state but no active canvas, create a temp canvas
-          const tempCanvas = document.createElement('canvas');
-          tempCanvas.width = viewport.width;
-          tempCanvas.height = viewport.height;
-          const tempFabric = new fabric.Canvas(tempCanvas, {
-            width: viewport.width,
-            height: viewport.height,
-          });
-          await new Promise<void>((resolve) => {
-            tempFabric.loadFromJSON(pageData.canvasJson, () => {
-              const annotationDataUrl = tempFabric.toDataURL({ format: 'png', multiplier: 1 });
-              const annotationImg = new Image();
-              annotationImg.onload = () => {
-                ctx.drawImage(annotationImg, 0, 0);
-                tempFabric.dispose();
-                resolve();
-              };
-              annotationImg.src = annotationDataUrl;
-            });
-          });
-        }
-
+        const canvas = await renderPageWithAnnotations(docState.pdfDoc, i, pageData);
         const blob = await new Promise<Blob>((resolve) => {
-          combinedCanvas.toBlob((b) => resolve(b!), 'image/png', 0.95);
+          canvas.toBlob((b) => resolve(b!), 'image/png', 0.95);
         });
         
         annotatedPages.push({ 
@@ -370,7 +437,31 @@ export function MultiDocumentAnnotator({
       }
     }
 
-    onSaveAndAnalyze(allDocumentPages);
+    // 2. Generate complete PDFs with all pages + annotations for storage
+    const completePdfs: AnnotatedPdf[] = [];
+
+    for (const doc of documents) {
+      const docState = documentStates.get(doc.id);
+      if (!docState) continue;
+
+      // Check if this document has any annotations
+      const hasAnyAnnotations = docState.pageData.some(pd => pageHasAnnotations(pd));
+      
+      if (hasAnyAnnotations) {
+        const pdfBlob = await generateCompletePdf(doc, docState);
+        completePdfs.push({
+          documentId: doc.id,
+          documentName: doc.name,
+          blob: pdfBlob,
+        });
+      }
+    }
+
+    // Pass both to the callback
+    onSaveAndAnalyze({
+      annotatedPages: allDocumentPages,
+      completePdfs,
+    });
   }, [documents, documentStates, activeDocId, currentDocState, onSaveAndAnalyze]);
 
   // Calculate total pages across all documents

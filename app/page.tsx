@@ -7,6 +7,7 @@ import {
   analyzeDocumentImages,
   pollJobStatus,
   getResults,
+  saveAnnotatedPdfs,
   type ExtractionResult,
   type JobStatus,
 } from '@/lib/api/extraction';
@@ -34,6 +35,17 @@ interface AnnotatedPage {
   blob: Blob;
 }
 
+interface AnnotatedPdf {
+  documentId: string;
+  documentName: string;
+  blob: Blob;
+}
+
+interface SaveAndAnalyzeData {
+  annotatedPages: Map<string, AnnotatedPage[]>;
+  completePdfs: AnnotatedPdf[];
+}
+
 interface PageMetadata {
   originalPageNumber: number;
   documentId: string;
@@ -53,10 +65,12 @@ export default function Home() {
   const [isDownloading, setIsDownloading] = useState(false);
 
   // Handle save and analyze from the annotation component
-  const handleSaveAndAnalyze = useCallback(async (documentPages: Map<string, AnnotatedPage[]>) => {
+  const handleSaveAndAnalyze = useCallback(async (data: SaveAndAnalyzeData) => {
     try {
       setAppState('analyzing');
       setError(null);
+
+      const { annotatedPages: documentPages, completePdfs } = data;
 
       // Calculate total annotated pages and build metadata
       let totalPages = 0;
@@ -82,9 +96,23 @@ export default function Home() {
         return;
       }
 
-      setAnalysisProgress({ current: 0, total: totalPages, percentage: 0, stage: 'Preparing documents...' });
+      setAnalysisProgress({ current: 0, total: totalPages, percentage: 0, stage: 'Saving complete documents...' });
 
-      // Upload to AI engine
+      // Save complete PDFs first (all pages with annotations)
+      if (completePdfs.length > 0) {
+        try {
+          await saveAnnotatedPdfs(
+            completePdfs.map(pdf => ({
+              documentName: pdf.documentName,
+              blob: pdf.blob,
+            }))
+          );
+          console.log(`Saved ${completePdfs.length} complete annotated PDFs`);
+        } catch (saveErr) {
+          console.error('Error saving PDFs (continuing with analysis):', saveErr);
+        }
+      }
+
       setAnalysisProgress({ current: 0, total: totalPages, percentage: 0, stage: 'Uploading to AI engine...' });
 
       // Submit for analysis (only annotated pages) with metadata
