@@ -99,18 +99,24 @@ export default function Home() {
       setAnalysisProgress({ current: 0, total: totalPages, percentage: 0, stage: 'Saving complete documents...' });
 
       // Save complete PDFs first (all pages with annotations)
+      console.log(`[PDF SAVE] completePdfs count: ${completePdfs.length}`);
       if (completePdfs.length > 0) {
+        completePdfs.forEach((pdf, i) => {
+          console.log(`[PDF SAVE] PDF ${i + 1}: ${pdf.documentName}, blob size: ${pdf.blob.size} bytes`);
+        });
         try {
-          await saveAnnotatedPdfs(
+          const result = await saveAnnotatedPdfs(
             completePdfs.map(pdf => ({
               documentName: pdf.documentName,
               blob: pdf.blob,
             }))
           );
-          console.log(`Saved ${completePdfs.length} complete annotated PDFs`);
+          console.log(`[PDF SAVE] Success! Saved ${completePdfs.length} complete annotated PDFs`, result);
         } catch (saveErr) {
-          console.error('Error saving PDFs (continuing with analysis):', saveErr);
+          console.error('[PDF SAVE] Error saving PDFs:', saveErr);
         }
+      } else {
+        console.log('[PDF SAVE] No complete PDFs to save - completePdfs array is empty');
       }
 
       setAnalysisProgress({ current: 0, total: totalPages, percentage: 0, stage: 'Uploading to AI engine...' });

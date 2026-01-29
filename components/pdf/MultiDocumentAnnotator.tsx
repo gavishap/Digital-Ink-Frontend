@@ -497,20 +497,40 @@ export function MultiDocumentAnnotator({
 
     for (const doc of documents) {
       const docState = documentStates.get(doc.id);
-      if (!docState) continue;
+      if (!docState) {
+        console.log(`[PDF GEN] No docState for ${doc.id}`);
+        continue;
+      }
 
       // Check if this document has any annotations
+      const annotationStatus = docState.pageData.map((pd, i) => ({
+        page: i + 1,
+        hasAnnotations: pageHasAnnotations(pd),
+        hasCanvas: !!pd?.fabricCanvas,
+        canvasObjects: pd?.fabricCanvas?.getObjects().length || 0,
+        hasJson: !!pd?.canvasJson,
+      }));
+      console.log(`[PDF GEN] ${doc.name} annotation status:`, annotationStatus);
+      
       const hasAnyAnnotations = docState.pageData.some(pd => pageHasAnnotations(pd));
+      console.log(`[PDF GEN] ${doc.name} hasAnyAnnotations: ${hasAnyAnnotations}`);
       
       if (hasAnyAnnotations) {
-        const pdfBlob = await generateCompletePdf(doc, docState);
-        completePdfs.push({
-          documentId: doc.id,
-          documentName: doc.name,
-          blob: pdfBlob,
-        });
+        try {
+          const pdfBlob = await generateCompletePdf(doc, docState);
+          console.log(`[PDF GEN] Generated PDF for ${doc.name}, size: ${pdfBlob.size} bytes`);
+          completePdfs.push({
+            documentId: doc.id,
+            documentName: doc.name,
+            blob: pdfBlob,
+          });
+        } catch (err) {
+          console.error(`[PDF GEN] Error generating PDF for ${doc.name}:`, err);
+        }
       }
     }
+    
+    console.log(`[PDF GEN] Total completePdfs generated: ${completePdfs.length}`);
 
     // Pass both to the callback
     onSaveAndAnalyze({
