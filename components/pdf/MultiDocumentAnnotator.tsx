@@ -171,6 +171,13 @@ export function MultiDocumentAnnotator({
         const docJsonMap = canvasJsonRef.current.get(activeDocId);
         const savedJson = docJsonMap?.get(pageIndex);
         
+        console.log(`[RENDER] Page ${pageIndex + 1} of doc ${activeDocId}`);
+        console.log(`[RENDER] Ref has doc map: ${!!docJsonMap}`);
+        console.log(`[RENDER] Saved JSON exists: ${!!savedJson}`);
+        if (savedJson) {
+          console.log(`[RENDER] JSON length: ${savedJson.length}, preview: ${savedJson.substring(0, 100)}...`);
+        }
+        
         // Update state with new canvas reference
         setDocumentStates(prev => {
           const newStates = new Map(prev);
@@ -189,7 +196,9 @@ export function MultiDocumentAnnotator({
         if (savedJson) {
           try {
             const jsonData = JSON.parse(savedJson);
+            console.log(`[RENDER] Loading JSON with ${jsonData.objects?.length || 0} objects`);
             fabricCanvas.loadFromJSON(jsonData, () => {
+              console.log(`[RENDER] loadFromJSON callback fired, objects on canvas: ${fabricCanvas.getObjects().length}`);
               fabricCanvas.renderAll();
             });
           } catch (e) {
@@ -200,10 +209,12 @@ export function MultiDocumentAnnotator({
         // Helper to save canvas state to ref
         const saveCanvasState = () => {
           const jsonState = JSON.stringify(fabricCanvas.toJSON());
+          console.log(`[SAVE] Saving canvas for page ${pageIndex + 1}, objects: ${fabricCanvas.getObjects().length}`);
           if (!canvasJsonRef.current.has(activeDocId)) {
             canvasJsonRef.current.set(activeDocId, new Map());
           }
           canvasJsonRef.current.get(activeDocId)!.set(pageIndex, jsonState);
+          console.log(`[SAVE] Ref now has keys for doc ${activeDocId}: ${Array.from(canvasJsonRef.current.get(activeDocId)!.keys())}`);
           
           // Also update React state for other components that need it
           setDocumentStates(prev => {
@@ -247,14 +258,21 @@ export function MultiDocumentAnnotator({
     const currentPageIndex = currentDocState.currentPage - 1;
     const currentCanvas = currentDocState.pageData[currentPageIndex]?.fabricCanvas;
     
+    console.log(`[GO_TO_PAGE] From page ${currentPageIndex + 1} to page ${pageNum}`);
+    console.log(`[GO_TO_PAGE] Current canvas exists: ${!!currentCanvas}`);
+    
     // Save current canvas state to REF before switching (critical for persistence)
     if (currentCanvas) {
+      const objectCount = currentCanvas.getObjects().length;
       const jsonState = JSON.stringify(currentCanvas.toJSON());
+      console.log(`[GO_TO_PAGE] Saving page ${currentPageIndex + 1} with ${objectCount} objects, JSON length: ${jsonState.length}`);
+      
       // Save to ref first (immediate, no async issues)
       if (!canvasJsonRef.current.has(activeDocId)) {
         canvasJsonRef.current.set(activeDocId, new Map());
       }
       canvasJsonRef.current.get(activeDocId)!.set(currentPageIndex, jsonState);
+      console.log(`[GO_TO_PAGE] Saved to ref. Ref keys: ${Array.from(canvasJsonRef.current.get(activeDocId)!.keys())}`);
       
       // Then update state
       setDocumentStates(prev => {
@@ -267,6 +285,7 @@ export function MultiDocumentAnnotator({
         return newStates;
       });
     } else {
+      console.log(`[GO_TO_PAGE] No canvas to save for page ${currentPageIndex + 1}`);
       setDocumentStates(prev => {
         const newStates = new Map(prev);
         const docState = newStates.get(activeDocId);
