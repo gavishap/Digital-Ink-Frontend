@@ -542,17 +542,30 @@ export function MultiDocumentAnnotator({
             <div className="h-10 w-px bg-gradient-to-b from-transparent via-stone-300 to-transparent"></div>
 
             {/* ─────────────────────────────────────────────────────────────────────
-                DRAWING TOOLS - Spaced out buttons with clear selection
+                DRAWING TOOLS - Sliding selector with animation
             ───────────────────────────────────────────────────────────────────── */}
             <div className="flex items-center gap-10">
-              {/* Tool Buttons - Individual with clear states */}
-              <div className="flex items-center gap-2 bg-stone-100/80 rounded-2xl p-2">
+              {/* Tool Buttons with Sliding Indicator */}
+              <div className="relative flex items-center bg-stone-100 rounded-2xl p-1.5">
+                {/* Sliding background - positioned absolutely */}
+                <div 
+                  className="absolute top-1.5 bottom-1.5 bg-white rounded-xl shadow-lg shadow-amber-500/25 ring-2 ring-amber-400/40 transition-all duration-300 ease-out"
+                  style={{
+                    width: '120px',
+                    transform: tool === 'pen' 
+                      ? 'translateX(0px)' 
+                      : tool === 'eraser' 
+                        ? 'translateX(124px)' 
+                        : 'translateX(248px)',
+                  }}
+                />
+                
                 <button
                   onClick={() => setTool('pen')}
-                  className={`flex items-center gap-3 px-5 py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${
+                  className={`relative z-10 flex items-center justify-center gap-4 w-[120px] py-4 rounded-xl font-semibold text-sm transition-colors duration-200 ${
                     tool === 'pen' 
-                      ? 'bg-white text-amber-600 shadow-lg shadow-amber-500/20 ring-2 ring-amber-400/30' 
-                      : 'text-stone-500 hover:text-stone-700 hover:bg-white/60'
+                      ? 'text-amber-600' 
+                      : 'text-stone-400 hover:text-stone-600'
                   }`}
                 >
                   <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -563,10 +576,10 @@ export function MultiDocumentAnnotator({
                 
                 <button
                   onClick={() => setTool('eraser')}
-                  className={`flex items-center gap-3 px-5 py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${
+                  className={`relative z-10 flex items-center justify-center gap-4 w-[120px] py-4 rounded-xl font-semibold text-sm transition-colors duration-200 ${
                     tool === 'eraser' 
-                      ? 'bg-white text-amber-600 shadow-lg shadow-amber-500/20 ring-2 ring-amber-400/30' 
-                      : 'text-stone-500 hover:text-stone-700 hover:bg-white/60'
+                      ? 'text-amber-600' 
+                      : 'text-stone-400 hover:text-stone-600'
                   }`}
                 >
                   <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -577,10 +590,10 @@ export function MultiDocumentAnnotator({
                 
                 <button
                   onClick={() => setTool('select')}
-                  className={`flex items-center gap-3 px-5 py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${
+                  className={`relative z-10 flex items-center justify-center gap-4 w-[120px] py-4 rounded-xl font-semibold text-sm transition-colors duration-200 ${
                     tool === 'select' 
-                      ? 'bg-white text-amber-600 shadow-lg shadow-amber-500/20 ring-2 ring-amber-400/30' 
-                      : 'text-stone-500 hover:text-stone-700 hover:bg-white/60'
+                      ? 'text-amber-600' 
+                      : 'text-stone-400 hover:text-stone-600'
                   }`}
                 >
                   <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
