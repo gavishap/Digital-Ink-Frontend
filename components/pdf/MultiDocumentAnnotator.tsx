@@ -179,15 +179,10 @@ export function MultiDocumentAnnotator({
         fabricCanvas.freeDrawingBrush.color = tool === 'eraser' ? '#FFFFFF' : brushColor;
         fabricCanvas.freeDrawingBrush.width = tool === 'eraser' ? 20 : brushWidth;
 
-        // Restore previous canvas state if exists
+        // Get saved JSON from current state before overwriting
         const savedJson = currentDocState.pageData[pageIndex]?.canvasJson;
-        if (savedJson) {
-          fabricCanvas.loadFromJSON(savedJson, () => {
-            fabricCanvas.renderAll();
-          });
-        }
-
-        // Update state with new canvas reference
+        
+        // Update state with new canvas reference first
         setDocumentStates(prev => {
           const newStates = new Map(prev);
           const docState = newStates.get(activeDocId);
@@ -199,6 +194,56 @@ export function MultiDocumentAnnotator({
             };
           }
           return newStates;
+        });
+
+        // Restore previous canvas state if exists (after state update)
+        if (savedJson) {
+          try {
+            const jsonData = typeof savedJson === 'string' ? JSON.parse(savedJson) : savedJson;
+            fabricCanvas.loadFromJSON(jsonData, () => {
+              fabricCanvas.renderAll();
+            });
+          } catch (e) {
+            console.error('Error loading canvas JSON:', e);
+          }
+        }
+        
+        // Auto-save canvas state on any path created (drawing)
+        fabricCanvas.on('path:created', () => {
+          const jsonState = JSON.stringify(fabricCanvas.toJSON());
+          setDocumentStates(prev => {
+            const newStates = new Map(prev);
+            const docState = newStates.get(activeDocId);
+            if (docState && docState.pageData[pageIndex]) {
+              docState.pageData[pageIndex].canvasJson = jsonState;
+            }
+            return newStates;
+          });
+        });
+        
+        // Auto-save on object modified/removed
+        fabricCanvas.on('object:modified', () => {
+          const jsonState = JSON.stringify(fabricCanvas.toJSON());
+          setDocumentStates(prev => {
+            const newStates = new Map(prev);
+            const docState = newStates.get(activeDocId);
+            if (docState && docState.pageData[pageIndex]) {
+              docState.pageData[pageIndex].canvasJson = jsonState;
+            }
+            return newStates;
+          });
+        });
+        
+        fabricCanvas.on('object:removed', () => {
+          const jsonState = JSON.stringify(fabricCanvas.toJSON());
+          setDocumentStates(prev => {
+            const newStates = new Map(prev);
+            const docState = newStates.get(activeDocId);
+            if (docState && docState.pageData[pageIndex]) {
+              docState.pageData[pageIndex].canvasJson = jsonState;
+            }
+            return newStates;
+          });
         });
       } catch (err) {
         console.error('Error rendering page:', err);
@@ -666,15 +711,15 @@ export function MultiDocumentAnnotator({
           </div>
 
           {/* ─────────────────────────────────────────────────────────────────────
-              SAVE & ANALYZE BUTTON - Prominent CTA
+              SAVE & ANALYZE BUTTON - Matching style
           ───────────────────────────────────────────────────────────────────── */}
           <button
             onClick={handleSaveAndAnalyze}
             disabled={isAnalyzing}
-            className={`group relative flex items-center gap-3 px-7 py-3 rounded-xl font-semibold text-white transition-all duration-300 ${
+            className={`flex items-center justify-center gap-4 px-8 py-4 rounded-xl font-semibold text-sm transition-all duration-300 ${
               isAnalyzing 
-                ? 'bg-emerald-400 cursor-not-allowed' 
-                : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/40 hover:-translate-y-0.5'
+                ? 'bg-stone-100 text-stone-400 cursor-not-allowed' 
+                : 'bg-stone-100 text-amber-600 hover:bg-white hover:shadow-lg hover:shadow-amber-500/25 hover:ring-2 hover:ring-amber-400/40'
             }`}
           >
             {isAnalyzing ? (
