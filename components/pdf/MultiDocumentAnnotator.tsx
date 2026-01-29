@@ -264,6 +264,20 @@ export function MultiDocumentAnnotator({
     }
   };
 
+  // Undo last stroke/object
+  const handleUndo = () => {
+    if (!currentDocState) return;
+    const pageData = currentDocState.pageData[currentDocState.currentPage - 1];
+    const canvas = pageData?.fabricCanvas;
+    if (canvas) {
+      const objects = canvas.getObjects();
+      if (objects.length > 0) {
+        canvas.remove(objects[objects.length - 1]);
+        canvas.renderAll();
+      }
+    }
+  };
+
   // Check if a page has any annotations
   const pageHasAnnotations = (pageData: PageData | null): boolean => {
     if (!pageData) return false;
@@ -528,20 +542,29 @@ export function MultiDocumentAnnotator({
             <div className="h-10 w-px bg-gradient-to-b from-transparent via-stone-300 to-transparent"></div>
 
             {/* ─────────────────────────────────────────────────────────────────────
-                DRAWING TOOLS - Grouped with labels
+                DRAWING TOOLS - Segmented control style
             ───────────────────────────────────────────────────────────────────── */}
-            <div className="flex items-center gap-6">
-              {/* Tool Buttons */}
-              <div className="flex items-center gap-1.5 bg-stone-100/80 rounded-xl p-1.5">
+            <div className="flex items-center gap-8">
+              {/* Tool Selector - Segmented Control */}
+              <div className="relative flex items-center bg-stone-100 rounded-2xl p-1.5 shadow-inner shadow-stone-200/50">
+                {/* Sliding background indicator */}
+                <div 
+                  className="absolute h-[calc(100%-12px)] bg-white rounded-xl shadow-lg shadow-stone-300/50 transition-all duration-300 ease-out"
+                  style={{
+                    width: 'calc(33.333% - 4px)',
+                    left: tool === 'pen' ? '6px' : tool === 'eraser' ? 'calc(33.333% + 2px)' : 'calc(66.666% - 2px)',
+                  }}
+                />
+                
                 <button
                   onClick={() => setTool('pen')}
-                  className={`group relative flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 ${
+                  className={`relative z-10 flex items-center gap-2.5 px-6 py-3 rounded-xl font-semibold text-sm transition-colors duration-200 ${
                     tool === 'pen' 
-                      ? 'bg-white text-amber-700 shadow-md shadow-stone-200/50' 
-                      : 'text-stone-500 hover:text-stone-700 hover:bg-white/50'
+                      ? 'text-amber-700' 
+                      : 'text-stone-400 hover:text-stone-600'
                   }`}
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                   </svg>
                   <span>Pen</span>
@@ -549,13 +572,13 @@ export function MultiDocumentAnnotator({
                 
                 <button
                   onClick={() => setTool('eraser')}
-                  className={`group relative flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 ${
+                  className={`relative z-10 flex items-center gap-2.5 px-6 py-3 rounded-xl font-semibold text-sm transition-colors duration-200 ${
                     tool === 'eraser' 
-                      ? 'bg-white text-amber-700 shadow-md shadow-stone-200/50' 
-                      : 'text-stone-500 hover:text-stone-700 hover:bg-white/50'
+                      ? 'text-amber-700' 
+                      : 'text-stone-400 hover:text-stone-600'
                   }`}
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                   <span>Eraser</span>
@@ -563,58 +586,77 @@ export function MultiDocumentAnnotator({
                 
                 <button
                   onClick={() => setTool('select')}
-                  className={`group relative flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 ${
+                  className={`relative z-10 flex items-center gap-2.5 px-6 py-3 rounded-xl font-semibold text-sm transition-colors duration-200 ${
                     tool === 'select' 
-                      ? 'bg-white text-amber-700 shadow-md shadow-stone-200/50' 
-                      : 'text-stone-500 hover:text-stone-700 hover:bg-white/50'
+                      ? 'text-amber-700' 
+                      : 'text-stone-400 hover:text-stone-600'
                   }`}
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
                   </svg>
                   <span>Select</span>
                 </button>
               </div>
 
+              {/* Divider */}
+              <div className="h-8 w-px bg-stone-200"></div>
+
               {/* Color Picker */}
               <div className="flex items-center gap-3">
-                <label className="text-xs font-semibold uppercase tracking-wider text-stone-400">Color</label>
-                <div className="relative">
+                <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Color</span>
+                <div className="relative group">
                   <input
                     type="color"
                     value={brushColor}
                     onChange={(e) => setBrushColor(e.target.value)}
-                    className="w-9 h-9 rounded-lg cursor-pointer border-2 border-stone-200 hover:border-stone-300 transition-colors"
+                    className="w-10 h-10 rounded-xl cursor-pointer border-2 border-stone-200 hover:border-amber-400 transition-all duration-200 hover:scale-105"
                     style={{ backgroundColor: brushColor }}
                   />
+                  <div className="absolute inset-0 rounded-xl ring-2 ring-white pointer-events-none"></div>
                 </div>
               </div>
 
               {/* Size Slider */}
-              <div className="flex items-center gap-3">
-                <label className="text-xs font-semibold uppercase tracking-wider text-stone-400">Size</label>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-stone-400 w-4 text-right">{brushWidth}</span>
+              <div className="flex items-center gap-4">
+                <span className="text-xs font-bold uppercase tracking-widest text-stone-400">Size</span>
+                <div className="flex items-center gap-3 bg-stone-100 rounded-xl px-4 py-2">
                   <input
                     type="range"
                     min="1"
                     max="10"
                     value={brushWidth}
                     onChange={(e) => setBrushWidth(Number(e.target.value))}
-                    className="w-24 h-1.5 bg-stone-200 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber-500 [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-pointer hover:[&::-webkit-slider-thumb]:bg-amber-600 [&::-webkit-slider-thumb]:transition-colors"
+                    className="w-28 h-2 bg-stone-300 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gradient-to-br [&::-webkit-slider-thumb]:from-amber-400 [&::-webkit-slider-thumb]:to-amber-600 [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-amber-500/30 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white"
                   />
+                  <span className="text-sm font-bold text-stone-600 w-6 text-center">{brushWidth}</span>
                 </div>
               </div>
+
+              {/* Divider */}
+              <div className="h-8 w-px bg-stone-200"></div>
+
+              {/* Undo Button */}
+              <button
+                onClick={handleUndo}
+                className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-stone-500 hover:text-amber-600 bg-stone-100 hover:bg-amber-50 rounded-xl transition-all duration-200 hover:shadow-md"
+                title="Undo last stroke"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                </svg>
+                <span>Undo</span>
+              </button>
 
               {/* Clear Button */}
               <button
                 onClick={handleClear}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-stone-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
+                className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-stone-500 hover:text-red-600 bg-stone-100 hover:bg-red-50 rounded-xl transition-all duration-200 hover:shadow-md"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                <span>Clear Page</span>
+                <span>Clear</span>
               </button>
             </div>
           </div>
