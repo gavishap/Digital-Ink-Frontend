@@ -433,6 +433,138 @@ export async function POST(request: NextRequest) {
               ],
             }),
 
+            // Complete Extraction by Page - Shows ALL extracted field values
+            new Paragraph({
+              heading: HeadingLevel.HEADING_1,
+              children: [new TextRun('Complete Extraction Summary')],
+            }),
+            new Paragraph({
+              spacing: { after: 200 },
+              children: [
+                new TextRun({
+                  text: 'All extracted field values organized by page:',
+                  color: '6B7280',
+                }),
+              ],
+            }),
+
+            // For each page, create a table of extracted fields
+            ...results.pages.flatMap((page) => {
+              const fieldEntries = Object.entries(page.field_values);
+              if (fieldEntries.length === 0) {
+                return [
+                  new Paragraph({
+                    heading: HeadingLevel.HEADING_2,
+                    children: [new TextRun(`Page ${page.page_number}`)],
+                  }),
+                  new Paragraph({
+                    spacing: { after: 200 },
+                    children: [
+                      new TextRun({
+                        text: 'No fields extracted from this page.',
+                        italics: true,
+                        color: '6B7280',
+                      }),
+                    ],
+                  }),
+                ];
+              }
+
+              // Helper to format field value for display
+              const formatValue = (fv: FieldValue): string => {
+                if (fv.circled_options && fv.circled_options.length > 0) {
+                  return fv.circled_options.join(', ');
+                }
+                if (fv.is_checked !== null && fv.is_checked !== undefined) {
+                  return fv.is_checked ? 'YES' : 'NO';
+                }
+                return fv.value || '(empty)';
+              };
+
+              return [
+                new Paragraph({
+                  heading: HeadingLevel.HEADING_2,
+                  children: [new TextRun(`Page ${page.page_number}`)],
+                }),
+                new Table({
+                  columnWidths: [3500, 4500, 1500],
+                  rows: [
+                    // Header row
+                    new TableRow({
+                      children: [
+                        new TableCell({
+                          borders: cellBorders,
+                          shading: { fill: 'E5E7EB', type: ShadingType.CLEAR },
+                          children: [
+                            new Paragraph({
+                              children: [new TextRun({ text: 'Field', bold: true })],
+                            }),
+                          ],
+                        }),
+                        new TableCell({
+                          borders: cellBorders,
+                          shading: { fill: 'E5E7EB', type: ShadingType.CLEAR },
+                          children: [
+                            new Paragraph({
+                              children: [new TextRun({ text: 'Value', bold: true })],
+                            }),
+                          ],
+                        }),
+                        new TableCell({
+                          borders: cellBorders,
+                          shading: { fill: 'E5E7EB', type: ShadingType.CLEAR },
+                          children: [
+                            new Paragraph({
+                              children: [new TextRun({ text: 'Confidence', bold: true })],
+                            }),
+                          ],
+                        }),
+                      ],
+                    }),
+                    // Data rows
+                    ...fieldEntries.map(([fieldId, fieldValue]) =>
+                      new TableRow({
+                        children: [
+                          new TableCell({
+                            borders: cellBorders,
+                            children: [
+                              new Paragraph({
+                                children: [new TextRun({ text: fieldId, size: 20 })],
+                              }),
+                            ],
+                          }),
+                          new TableCell({
+                            borders: cellBorders,
+                            children: [
+                              new Paragraph({
+                                children: [new TextRun({ text: formatValue(fieldValue), size: 20 })],
+                              }),
+                            ],
+                          }),
+                          new TableCell({
+                            borders: cellBorders,
+                            children: [
+                              new Paragraph({
+                                children: [
+                                  new TextRun({
+                                    text: `${(fieldValue.confidence * 100).toFixed(0)}%`,
+                                    size: 20,
+                                    color: getConfidenceColor(fieldValue.confidence),
+                                  }),
+                                ],
+                              }),
+                            ],
+                          }),
+                        ],
+                      })
+                    ),
+                  ],
+                }),
+                // Add spacing after each table
+                new Paragraph({ spacing: { after: 300 }, children: [] }),
+              ];
+            }),
+
             // Review Items Section (if any)
             ...(results.all_review_reasons.length > 0
               ? [
@@ -459,10 +591,10 @@ export async function POST(request: NextRequest) {
                 ]
               : []),
 
-            // Page-by-Page Results
+            // Page-by-Page Clinical Annotations
             new Paragraph({
               heading: HeadingLevel.HEADING_1,
-              children: [new TextRun('Page-by-Page Results')],
+              children: [new TextRun('Clinical Annotations & Review Items by Page')],
             }),
 
             // Each page
