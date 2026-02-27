@@ -20,6 +20,7 @@ async function authHeaders(): Promise<HeadersInit> {
 
 export interface AnalyzeResponse {
   job_id: string;
+  document_id: string;
   status: string;
   message: string;
 }
@@ -230,19 +231,18 @@ export async function analyzeDocumentImages(
  */
 export async function saveAnnotatedPdfs(
   pdfs: { documentName: string; blob: Blob }[],
-  jobId?: string,
-): Promise<{ success: boolean; savedFiles: string[] }> {
+  opts?: { jobId?: string; documentId?: string },
+): Promise<{ success: boolean; savedFiles: string[]; document_id?: string }> {
   const formData = new FormData();
   
-  pdfs.forEach((pdf, index) => {
+  pdfs.forEach((pdf) => {
     const filename = `${pdf.documentName.replace(/\s+/g, '_')}_annotated.pdf`;
     const file = new File([pdf.blob], filename, { type: 'application/pdf' });
     formData.append('files', file);
   });
   
-  if (jobId) {
-    formData.append('job_id', jobId);
-  }
+  if (opts?.jobId) formData.append('job_id', opts.jobId);
+  if (opts?.documentId) formData.append('document_id', opts.documentId);
   
   const response = await fetch(`${API_BASE_URL}/api/save-annotated-pdfs`, {
     method: 'POST',

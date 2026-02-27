@@ -2,7 +2,8 @@ import { createClient } from '../supabase/client';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-async function authHeaders(): Promise<HeadersInit> {
+async function authHeaders(token?: string): Promise<HeadersInit> {
+  if (token) return { Authorization: `Bearer ${token}` };
   const supabase = createClient();
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.access_token) return {};
@@ -28,6 +29,20 @@ export interface DocumentListItem {
   report_count: number;
 }
 
+export interface PdfFile {
+  path: string;
+  name: string;
+  url: string | null;
+}
+
+export interface RelatedDocument {
+  id: string;
+  file_name: string;
+  status: string;
+  total_pages: number | null;
+  created_at: string;
+}
+
 export interface DocumentDetail {
   document: {
     id: string;
@@ -39,7 +54,10 @@ export interface DocumentDetail {
     created_at: string;
     updated_at: string;
     patient: Record<string, string> | null;
+    patient_id: string | null;
   };
+  pdfs: PdfFile[];
+  pages: Array<{ page_number: number; image_url: string | null }>;
   jobs: Array<{
     id: string;
     status: string;
@@ -69,13 +87,7 @@ export interface DocumentDetail {
     details: Record<string, unknown> | null;
     created_at: string;
   }>;
-}
-
-export interface DocumentPage {
-  page_number: number;
-  signed_url: string | null;
-  annotated_image_path: string | null;
-  original_image_path: string | null;
+  related_documents: RelatedDocument[];
 }
 
 export async function listDocuments(params?: {
@@ -83,6 +95,7 @@ export async function listDocuments(params?: {
   status?: string;
   limit?: number;
   offset?: number;
+  token?: string;
 }): Promise<{ documents: DocumentListItem[]; total: number }> {
   const qs = new URLSearchParams();
   if (params?.search) qs.set('search', params.search);
@@ -91,32 +104,32 @@ export async function listDocuments(params?: {
   if (params?.offset) qs.set('offset', String(params.offset));
 
   const response = await fetch(`${API_BASE_URL}/api/documents?${qs}`, {
-    headers: await authHeaders(),
+    headers: await authHeaders(params?.token),
   });
   if (!response.ok) throw new Error('Failed to fetch documents');
   return response.json();
 }
 
-export async function getDocumentDetail(documentId: string): Promise<DocumentDetail> {
+export async function getDocumentDetail(documentId: string, token?: string): Promise<DocumentDetail> {
   const response = await fetch(`${API_BASE_URL}/api/documents/${documentId}`, {
-    headers: await authHeaders(),
+    headers: await authHeaders(token),
   });
   if (!response.ok) throw new Error('Failed to fetch document detail');
   return response.json();
 }
 
-export async function getDocumentPages(documentId: string): Promise<{ document_id: string; pages: DocumentPage[] }> {
+export async function getDocumentPages(documentId: string, token?: string): Promise<{ document_id: string; pages: DocumentPage[] }> {
   const response = await fetch(`${API_BASE_URL}/api/documents/${documentId}/pages`, {
-    headers: await authHeaders(),
+    headers: await authHeaders(token),
   });
   if (!response.ok) throw new Error('Failed to fetch document pages');
   return response.json();
 }
 
-export async function reanalyzeDocument(documentId: string): Promise<{ job_id: string; status: string; message: string }> {
+export async function reanalyzeDocument(documentId: string, token?: string): Promise<{ job_id: string; status: string; message: string }> {
   const response = await fetch(`${API_BASE_URL}/api/documents/${documentId}/reanalyze`, {
     method: 'POST',
-    headers: await authHeaders(),
+    headers: await authHeaders(token),
   });
   if (!response.ok) throw new Error('Failed to start re-analysis');
   return response.json();

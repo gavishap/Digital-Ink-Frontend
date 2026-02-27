@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useRef, useCallback } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import { listDocuments, type DocumentListItem } from '@/lib/api/documents';
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
@@ -30,6 +31,7 @@ function formatDate(iso: string) {
 }
 
 export default function DocumentsPage() {
+  const { session } = useAuth();
   const [docs, setDocs] = useState<DocumentListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loaded, setLoaded] = useState(false);
@@ -37,13 +39,15 @@ export default function DocumentsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [error, setError] = useState('');
   const fetchRef = useRef(false);
+  const token = session?.access_token;
 
   const load = useCallback(async (s?: string, st?: string) => {
     try {
       const res = await listDocuments({
         search: s ?? search,
-        status: st ?? statusFilter || undefined,
+        status: (st ?? statusFilter) || undefined,
         limit: 50,
+        token,
       });
       setDocs(res.documents);
       setTotal(res.total);
@@ -52,9 +56,9 @@ export default function DocumentsPage() {
     } finally {
       setLoaded(true);
     }
-  }, [search, statusFilter]);
+  }, [search, statusFilter, token]);
 
-  if (!fetchRef.current) {
+  if (!fetchRef.current && token) {
     fetchRef.current = true;
     load();
   }

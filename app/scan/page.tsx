@@ -96,27 +96,27 @@ export default function ScanPage() {
         return;
       }
 
-      setAnalysisProgress({ current: 0, total: totalPages, percentage: 0, stage: 'Saving complete documents...' });
+      setAnalysisProgress({ current: 0, total: totalPages, percentage: 0, stage: 'Uploading to AI engine...' });
+
+      const { job_id, document_id } = await analyzeDocumentImages(allBlobs, {
+        name: 'Patient Forms - Combined',
+        pageMetadata,
+      });
 
       if (completePdfs.length > 0) {
+        setAnalysisProgress({ current: 0, total: totalPages, percentage: 0, stage: 'Saving complete documents...' });
         try {
           await saveAnnotatedPdfs(
             completePdfs.map(pdf => ({
               documentName: pdf.documentName,
               blob: pdf.blob,
-            }))
+            })),
+            { jobId: job_id, documentId: document_id },
           );
         } catch (saveErr) {
           console.error('[PDF SAVE] Error saving PDFs:', saveErr);
         }
       }
-
-      setAnalysisProgress({ current: 0, total: totalPages, percentage: 0, stage: 'Uploading to AI engine...' });
-
-      const { job_id } = await analyzeDocumentImages(allBlobs, {
-        name: 'Patient Forms - Combined',
-        pageMetadata,
-      });
 
       const onProgress = (status: JobStatus) => {
         const progress = status.progress || 0;
