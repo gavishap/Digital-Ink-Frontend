@@ -20,40 +20,46 @@ export default function ForgotPasswordPage() {
     });
 
     setLoading(false);
-
     if (resetError) {
       setError(resetError.message);
       return;
     }
-
     setSent(true);
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-blue-50/30 px-4">
       <div className="w-full max-w-sm">
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-900">Reset Password</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Enter your email and we&apos;ll send you a reset link
-            </p>
+        <div className="text-center mb-8">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-200/50">
+            <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
           </div>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Reset Password</h1>
+          <p className="text-sm text-gray-500 mt-1">We&apos;ll send you a reset link</p>
+        </div>
 
+        <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100 p-8">
           {sent ? (
-            <div className="bg-green-50 border border-green-200 rounded-md p-4 text-center">
-              <p className="text-sm text-green-800 font-medium">Check your email</p>
-              <p className="text-sm text-green-700 mt-1">
-                We sent a password reset link to <strong>{email}</strong>
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-gray-900">Check your email</p>
+              <p className="text-sm text-gray-500 mt-1">
+                We sent a reset link to <strong className="text-gray-700">{email}</strong>
               </p>
-              <a href="/login" className="inline-block mt-4 text-sm text-blue-600 hover:text-blue-800">
+              <a href="/login" className="inline-block mt-5 text-sm text-blue-600 hover:text-blue-800 transition-colors">
                 Back to login
               </a>
             </div>
           ) : (
-            <form onSubmit={handleReset} className="space-y-4">
+            <form onSubmit={handleReset} className="space-y-5">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
                   Email
                 </label>
                 <input
@@ -62,13 +68,13 @@ export default function ForgotPasswordPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-gray-50/50 placeholder:text-gray-400 transition-shadow"
                   placeholder="you@example.com"
                 />
               </div>
 
               {error && (
-                <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3">
                   <p className="text-sm text-red-700">{error}</p>
                 </div>
               )}
@@ -76,13 +82,13 @@ export default function ForgotPasswordPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2 px-4 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-blue-200/50"
               >
                 {loading ? 'Sending...' : 'Send Reset Link'}
               </button>
 
               <div className="text-center">
-                <a href="/login" className="text-sm text-blue-600 hover:text-blue-800">
+                <a href="/login" className="text-sm text-blue-600 hover:text-blue-800 transition-colors">
                   Back to login
                 </a>
               </div>

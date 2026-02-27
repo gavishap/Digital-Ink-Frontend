@@ -3,8 +3,8 @@ import { AuthProvider } from '../components/auth/AuthProvider';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Digital Ink - Patient Intake',
-  description: 'Digital patient intake forms with Apple Pencil support',
+  title: 'Digital Ink',
+  description: 'AI-powered document extraction and analysis platform',
 };
 
 export const viewport: Viewport = {

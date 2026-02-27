@@ -67,66 +67,68 @@ export default function TeamPage() {
     else loadMembers();
   }
 
+  function getInitials(name: string) {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  }
+
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Team Management</h1>
-          <p className="text-sm text-gray-500 mt-1">Invite and manage team members</p>
+          <h1 className="text-2xl font-bold text-gray-900">Team Management</h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {members.length} member{members.length !== 1 ? 's' : ''}
+          </p>
         </div>
-        <div className="flex gap-2">
-          <a
-            href="/"
-            className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded-md transition-colors"
-          >
-            Back
-          </a>
-          <button
-            onClick={() => { setInviteOpen(true); setInviteError(''); }}
-            className="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-          >
-            Invite Member
-          </button>
-        </div>
+        <button
+          onClick={() => { setInviteOpen(true); setInviteError(''); }}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          Invite Member
+        </button>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
           <p className="text-sm text-red-700">{error}</p>
         </div>
       )}
 
+      {/* Invite Form */}
       {inviteOpen && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6 shadow-sm">
+        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Invite New Member</h2>
-          <form action={handleInvite} className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <form action={handleInvite} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Name</label>
                 <input
                   name="name"
                   type="text"
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-gray-50/50 placeholder:text-gray-400"
                   placeholder="Full name"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
                 <input
                   name="email"
                   type="email"
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-gray-50/50 placeholder:text-gray-400"
                   placeholder="user@example.com"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
                 <select
                   name="role"
                   defaultValue="staff"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-gray-50/50"
                 >
                   <option value="staff">Staff</option>
                   <option value="admin">Admin</option>
@@ -134,107 +136,104 @@ export default function TeamPage() {
               </div>
             </div>
             {inviteError && (
-              <div className="bg-red-50 border border-red-200 rounded-md p-2">
+              <div className="bg-red-50 border border-red-200 rounded-xl p-3">
                 <p className="text-sm text-red-700">{inviteError}</p>
               </div>
             )}
-            <div className="flex gap-2">
+            <div className="flex items-center gap-3">
               <button
                 type="submit"
                 disabled={inviting}
-                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
               >
                 {inviting ? 'Inviting...' : 'Send Invite'}
               </button>
               <button
                 type="button"
                 onClick={() => setInviteOpen(false)}
-                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
             </div>
-            <p className="text-xs text-gray-500">
-              The user will be created with a temporary password and should use &quot;Forgot Password&quot; to set their own.
+            <p className="text-xs text-gray-400">
+              They&apos;ll be created with a temporary password and should use &quot;Forgot Password&quot; to set their own.
             </p>
           </form>
         </div>
       )}
 
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="text-left text-sm font-medium text-gray-600 px-4 py-3">Name</th>
-              <th className="text-left text-sm font-medium text-gray-600 px-4 py-3">Email</th>
-              <th className="text-left text-sm font-medium text-gray-600 px-4 py-3">Role</th>
-              <th className="text-left text-sm font-medium text-gray-600 px-4 py-3">Last Login</th>
-              <th className="text-right text-sm font-medium text-gray-600 px-4 py-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {!loaded ? (
-              <tr>
-                <td colSpan={5} className="text-center py-8 text-gray-500 text-sm">Loading...</td>
-              </tr>
-            ) : members.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="text-center py-8 text-gray-500 text-sm">No team members yet</td>
-              </tr>
-            ) : (
-              members.map((m) => (
-                <tr key={m.id} className="border-b border-gray-100 last:border-0">
-                  <td className="px-4 py-3 text-sm text-gray-900">{m.name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{m.email}</td>
-                  <td className="px-4 py-3">
-                    <select
-                      value={m.role}
-                      onChange={(e) => handleRoleChange(m.id, e.target.value)}
-                      disabled={m.id === user?.id}
-                      className="text-sm border border-gray-200 rounded px-2 py-1 text-gray-900 disabled:opacity-50"
-                    >
-                      <option value="staff">Staff</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
-                    {m.last_login
-                      ? new Date(m.last_login).toLocaleDateString()
-                      : 'Never'}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {m.id === user?.id ? (
-                      <span className="text-xs text-gray-400">You</span>
-                    ) : confirmDeactivate === m.id ? (
-                      <span className="flex items-center justify-end gap-2">
-                        <span className="text-xs text-red-600">Confirm?</span>
-                        <button
-                          onClick={() => handleDeactivate(m.id)}
-                          className="text-xs text-red-600 hover:text-red-800 font-medium"
-                        >
-                          Yes
-                        </button>
-                        <button
-                          onClick={() => setConfirmDeactivate(null)}
-                          className="text-xs text-gray-500 hover:text-gray-700"
-                        >
-                          No
-                        </button>
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => setConfirmDeactivate(m.id)}
-                        className="text-xs text-red-500 hover:text-red-700"
-                      >
-                        Deactivate
-                      </button>
+      {/* Members List */}
+      <div className="space-y-3">
+        {!loaded ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-400 text-sm">
+            Loading team members...
+          </div>
+        ) : members.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-400 text-sm">
+            No team members yet. Invite someone to get started.
+          </div>
+        ) : (
+          members.map((m) => (
+            <div key={m.id} className="bg-white rounded-xl border border-gray-200 px-5 py-4 flex items-center justify-between hover:border-gray-300 transition-colors">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center shrink-0">
+                  <span className="text-sm font-bold text-white">{getInitials(m.name)}</span>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-gray-900">{m.name}</p>
+                    {m.id === user?.id && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-600">You</span>
                     )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-0.5">{m.email}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <select
+                  value={m.role}
+                  onChange={(e) => handleRoleChange(m.id, e.target.value)}
+                  disabled={m.id === user?.id}
+                  className={`text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
+                    m.role === 'admin'
+                      ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                      : 'bg-gray-50 border-gray-200 text-gray-700'
+                  } disabled:opacity-50`}
+                >
+                  <option value="staff">Staff</option>
+                  <option value="admin">Admin</option>
+                </select>
+
+                {m.id !== user?.id && (
+                  confirmDeactivate === m.id ? (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => handleDeactivate(m.id)}
+                        className="text-xs text-red-600 font-medium hover:text-red-800 px-2 py-1 rounded-md hover:bg-red-50 transition-colors"
+                      >
+                        Confirm
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeactivate(null)}
+                        className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDeactivate(m.id)}
+                      className="text-xs text-gray-400 hover:text-red-600 px-2 py-1 rounded-md hover:bg-red-50 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  )
+                )}
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

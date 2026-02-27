@@ -1,246 +1,160 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
-import { MultiDocumentAnnotator } from '@/components/pdf/MultiDocumentAnnotator';
-import { AnalysisResultsView } from '@/components/document/AnalysisResultsView';
-import {
-  analyzeDocumentImages,
-  pollJobStatus,
-  getResults,
-  saveAnnotatedPdfs,
-  type ExtractionResult,
-  type JobStatus,
-} from '@/lib/api/extraction';
+import Link from 'next/link';
+import { useState, useRef } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { getDashboardStats } from './dashboard-actions';
 
-// Document configuration for the two forms
-const documents = [
-  {
-    id: 'orofacial',
-    name: 'Orofacial Pain Examination',
-    pdfUrl: '/orofacial-exam.pdf',
-  },
-  {
-    id: 'consents',
-    name: 'Consents',
-    pdfUrl: '/consents.pdf',
-  },
-];
+type Stats = Awaited<ReturnType<typeof getDashboardStats>>;
 
-type AppState = 'annotating' | 'analyzing' | 'results' | 'error';
+const ACTION_LABELS: Record<string, string> = {
+  extraction_started: 'Extraction started',
+  extraction_completed: 'Extraction completed',
+  document_uploaded: 'Document uploaded',
+  report_generated: 'Report generated',
+  reanalysis_started: 'Re-analysis started',
+};
 
-interface AnnotatedPage {
-  pageNumber: number;
-  documentId: string;
-  documentName: string;
-  blob: Blob;
+function formatRelativeTime(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
 }
 
-interface AnnotatedPdf {
-  documentId: string;
-  documentName: string;
-  blob: Blob;
-}
+export default function DashboardPage() {
+  const { user, role } = useAuth();
+  const [stats, setStats] = useState<Stats | null>(null);
+  const fetchStarted = useRef(false);
 
-interface SaveAndAnalyzeData {
-  annotatedPages: Map<string, AnnotatedPage[]>;
-  completePdfs: AnnotatedPdf[];
-}
-
-interface PageMetadata {
-  originalPageNumber: number;
-  documentId: string;
-  documentName: string;
-}
-
-export default function Home() {
-  const [appState, setAppState] = useState<AppState>('annotating');
-  const [analysisProgress, setAnalysisProgress] = useState<{
-    current: number;
-    total: number;
-    percentage: number;
-    stage?: string;
-  } | null>(null);
-  const [results, setResults] = useState<ExtractionResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isDownloading, setIsDownloading] = useState(false);
-
-  // Handle save and analyze from the annotation component
-  const handleSaveAndAnalyze = useCallback(async (data: SaveAndAnalyzeData) => {
-    try {
-      setAppState('analyzing');
-      setError(null);
-
-      const { annotatedPages: documentPages, completePdfs } = data;
-
-      // Calculate total annotated pages and build metadata
-      let totalPages = 0;
-      const allBlobs: Blob[] = [];
-      const pageMetadata: PageMetadata[] = [];
-
-      for (const [, pages] of documentPages.entries()) {
-        for (const { pageNumber, documentId, documentName, blob } of pages) {
-          allBlobs.push(blob);
-          pageMetadata.push({
-            originalPageNumber: pageNumber,
-            documentId,
-            documentName,
-          });
-          totalPages++;
-        }
-      }
-
-      // Check if there are any annotated pages
-      if (totalPages === 0) {
-        setError('No pages have been annotated. Please draw on at least one page before analyzing.');
-        setAppState('error');
-        return;
-      }
-
-      setAnalysisProgress({ current: 0, total: totalPages, percentage: 0, stage: 'Saving complete documents...' });
-
-      // Save complete PDFs first (all pages with annotations)
-      console.log(`[PDF SAVE] completePdfs count: ${completePdfs.length}`);
-      if (completePdfs.length > 0) {
-        completePdfs.forEach((pdf, i) => {
-          console.log(`[PDF SAVE] PDF ${i + 1}: ${pdf.documentName}, blob size: ${pdf.blob.size} bytes`);
-        });
-        try {
-          const result = await saveAnnotatedPdfs(
-            completePdfs.map(pdf => ({
-              documentName: pdf.documentName,
-              blob: pdf.blob,
-            }))
-          );
-          console.log(`[PDF SAVE] Success! Saved ${completePdfs.length} complete annotated PDFs`, result);
-        } catch (saveErr) {
-          console.error('[PDF SAVE] Error saving PDFs:', saveErr);
-        }
-      } else {
-        console.log('[PDF SAVE] No complete PDFs to save - completePdfs array is empty');
-      }
-
-      setAnalysisProgress({ current: 0, total: totalPages, percentage: 0, stage: 'Uploading to AI engine...' });
-
-      // Submit for analysis (only annotated pages) with metadata
-      const { job_id } = await analyzeDocumentImages(allBlobs, {
-        name: 'Patient Forms - Combined',
-        pageMetadata,
+  if (!fetchStarted.current) {
+    fetchStarted.current = true;
+    getDashboardStats().then(setStats).catch(() => {
+      setStats({
+        totalDocuments: 0,
+        completedJobs: 0,
+        totalReports: 0,
+        processingJobs: 0,
+        recentActivity: [],
       });
-
-      // Poll for completion with percentage tracking
-      const onProgress = (status: JobStatus) => {
-        const progress = status.progress || 0;
-        const total = status.total_pages || totalPages;
-        const percentage = status.percentage || (total > 0 ? Math.round((progress / total) * 100) : 0);
-        
-        setAnalysisProgress({
-          current: progress,
-          total: total,
-          percentage: percentage,
-          stage: status.current_stage || 'Analyzing...',
-        });
-      };
-
-      const finalStatus = await pollJobStatus(job_id, onProgress);
-
-      if (finalStatus.status === 'failed') {
-        throw new Error(finalStatus.message || 'Analysis failed');
-      }
-
-      // Get results
-      setAnalysisProgress({ current: totalPages, total: totalPages, percentage: 100, stage: 'Retrieving results...' });
-      const extractionResults = await getResults(job_id);
-
-      setResults(extractionResults);
-      setAppState('results');
-    } catch (err) {
-      console.error('Analysis error:', err);
-      setError(err instanceof Error ? err.message : 'Analysis failed');
-      setAppState('error');
-    }
-  }, []);
-
-  // Download the DOCX report
-  const handleDownloadReport = useCallback(async () => {
-    if (!results) return;
-
-    setIsDownloading(true);
-    try {
-      const response = await fetch('/api/generate-report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(results),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate report');
-      }
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${results.form_name || 'findings'}_report.docx`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Download error:', err);
-      setError('Failed to download report');
-    } finally {
-      setIsDownloading(false);
-    }
-  }, [results]);
-
-  // Start over
-  const handleStartOver = useCallback(() => {
-    setAppState('annotating');
-    setResults(null);
-    setError(null);
-    setAnalysisProgress(null);
-  }, []);
-
-  // Render based on state
-  if (appState === 'error') {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Analysis Failed</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <button
-            onClick={handleStartOver}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (appState === 'results' && results) {
-    return (
-      <AnalysisResultsView
-        results={results}
-        onDownloadReport={handleDownloadReport}
-        onStartOver={handleStartOver}
-        isDownloading={isDownloading}
-      />
-    );
+    });
   }
 
   return (
-    <MultiDocumentAnnotator
-      documents={documents}
-      onSaveAndAnalyze={handleSaveAndAnalyze}
-      isAnalyzing={appState === 'analyzing'}
-      analysisProgress={analysisProgress || undefined}
-    />
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+      {/* Welcome */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">
+          Welcome back{user?.email ? `, ${user.email.split('@')[0]}` : ''}
+        </h1>
+        <p className="text-gray-500 mt-1">
+          {role === 'admin' ? 'Administrator' : 'Staff'} Dashboard
+        </p>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {[
+          { label: 'Documents', value: stats?.totalDocuments ?? '-', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', color: 'blue' },
+          { label: 'Completed', value: stats?.completedJobs ?? '-', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', color: 'green' },
+          { label: 'Reports', value: stats?.totalReports ?? '-', icon: 'M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z', color: 'indigo' },
+          { label: 'Processing', value: stats?.processingJobs ?? '-', icon: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15', color: 'amber' },
+        ].map((stat) => (
+          <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3 mb-3">
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+                stat.color === 'blue' ? 'bg-blue-50 text-blue-600' :
+                stat.color === 'green' ? 'bg-emerald-50 text-emerald-600' :
+                stat.color === 'indigo' ? 'bg-indigo-50 text-indigo-600' :
+                'bg-amber-50 text-amber-600'
+              }`}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d={stat.icon} />
+                </svg>
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+            <p className="text-sm text-gray-500">{stat.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Quick Actions */}
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
+        <Link href="/scan" className="group bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl p-6 text-white hover:shadow-lg hover:shadow-blue-200/50 transition-all hover:-translate-y-0.5">
+          <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center mb-4 group-hover:bg-white/30 transition-colors">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold mb-1">New Scan</h3>
+          <p className="text-blue-100 text-sm">Annotate and analyze new patient documents</p>
+        </Link>
+
+        <Link href="/documents" className="group bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg hover:border-gray-300 transition-all hover:-translate-y-0.5">
+          <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mb-4 group-hover:bg-blue-50 transition-colors">
+            <svg className="w-6 h-6 text-gray-600 group-hover:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-1">Documents</h3>
+          <p className="text-gray-500 text-sm">Browse all scanned documents and reports</p>
+        </Link>
+
+        {role === 'admin' && (
+          <Link href="/admin/team" className="group bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg hover:border-gray-300 transition-all hover:-translate-y-0.5">
+            <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mb-4 group-hover:bg-indigo-50 transition-colors">
+              <svg className="w-6 h-6 text-gray-600 group-hover:text-indigo-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">Team</h3>
+            <p className="text-gray-500 text-sm">Manage team members and permissions</p>
+          </Link>
+        )}
+      </div>
+
+      {/* Recent Activity */}
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        {!stats ? (
+          <div className="p-8 text-center text-gray-400 text-sm">Loading activity...</div>
+        ) : stats.recentActivity.length === 0 ? (
+          <div className="p-8 text-center text-gray-400 text-sm">No recent activity</div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {stats.recentActivity.map((a) => (
+              <div key={a.id} className="px-5 py-3.5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-2 h-2 rounded-full ${
+                    a.action.includes('completed') ? 'bg-emerald-500' :
+                    a.action.includes('started') ? 'bg-blue-500' :
+                    a.action.includes('generated') ? 'bg-indigo-500' :
+                    'bg-gray-400'
+                  }`} />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {ACTION_LABELS[a.action] ?? a.action.replace(/_/g, ' ')}
+                    </p>
+                    {a.details && (
+                      <p className="text-xs text-gray-400">
+                        {(a.details as Record<string, unknown>).pages && `${(a.details as Record<string, unknown>).pages} pages`}
+                        {(a.details as Record<string, unknown>).model && ` · ${(a.details as Record<string, unknown>).model}`}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <span className="text-xs text-gray-400 whitespace-nowrap">{formatRelativeTime(a.createdAt)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

@@ -26,10 +26,8 @@ export default function ResetPasswordPage() {
     }
 
     setLoading(true);
-
     const supabase = createClient();
     const { error: updateError } = await supabase.auth.updateUser({ password });
-
     setLoading(false);
 
     if (updateError) {
@@ -42,23 +40,33 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-blue-50/30 px-4">
       <div className="w-full max-w-sm">
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-900">Set New Password</h1>
-            <p className="text-sm text-gray-500 mt-1">Enter your new password below</p>
+        <div className="text-center mb-8">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-200/50">
+            <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
           </div>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Set New Password</h1>
+          <p className="text-sm text-gray-500 mt-1">Choose a strong password</p>
+        </div>
 
+        <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100 p-8">
           {success ? (
-            <div className="bg-green-50 border border-green-200 rounded-md p-4 text-center">
-              <p className="text-sm text-green-800 font-medium">Password updated successfully</p>
-              <p className="text-sm text-green-700 mt-1">Redirecting to login...</p>
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-gray-900">Password updated</p>
+              <p className="text-sm text-gray-500 mt-1">Redirecting to login...</p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
                   New Password
                 </label>
                 <input
@@ -68,13 +76,13 @@ export default function ResetPasswordPage() {
                   minLength={8}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-gray-50/50 placeholder:text-gray-400 transition-shadow"
                   placeholder="Minimum 8 characters"
                 />
               </div>
 
               <div>
-                <label htmlFor="confirm" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="confirm" className="block text-sm font-medium text-gray-700 mb-1.5">
                   Confirm Password
                 </label>
                 <input
@@ -84,13 +92,13 @@ export default function ResetPasswordPage() {
                   minLength={8}
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-gray-50/50 placeholder:text-gray-400 transition-shadow"
                   placeholder="Re-enter password"
                 />
               </div>
 
               {error && (
-                <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3">
                   <p className="text-sm text-red-700">{error}</p>
                 </div>
               )}
@@ -98,7 +106,7 @@ export default function ResetPasswordPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2 px-4 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-blue-200/50"
               >
                 {loading ? 'Updating...' : 'Update Password'}
               </button>
