@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 import { MultiDocumentAnnotator } from '@/components/pdf/MultiDocumentAnnotator';
 import { AnalysisResultsView } from '@/components/document/AnalysisResultsView';
+import { getDocumentDetail } from '@/lib/api/documents';
 import {
   analyzeDocumentImages,
   pollJobStatus,
@@ -26,7 +28,7 @@ const DEFAULT_DOCUMENTS = [
   },
 ];
 
-type AppState = 'annotating' | 'analyzing' | 'results' | 'error';
+type AppState = 'loading' | 'annotating' | 'analyzing' | 'results' | 'error';
 
 interface AnnotatedPage {
   pageNumber: number;
@@ -55,8 +57,11 @@ interface PageMetadata {
 export default function ScanPage() {
   const searchParams = useSearchParams();
   const documentId = searchParams.get('documentId');
+  const { session } = useAuth();
+  const token = session?.access_token;
 
-  const [appState, setAppState] = useState<AppState>('annotating');
+  const [appState, setAppState] = useState<AppState>(documentId ? 'loading' : 'annotating');
+  const [loadedDocs, setLoadedDocs] = useState<{ id: string; name: string; pdfUrl: string }[] | null>(null);
   const [analysisProgress, setAnalysisProgress] = useState<{
     current: number;
     total: number;
@@ -66,6 +71,31 @@ export default function ScanPage() {
   const [results, setResults] = useState<ExtractionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const fetchRef = useRef(false);
+
+  if (documentId && token && !fetchRef.current) {
+    fetchRef.current = true;
+    getDocumentDetail(documentId, token)
+      .then((detail) => {
+        const pdfs = detail.pdfs ?? [];
+        if (pdfs.length > 0) {
+          setLoadedDocs(
+            pdfs.filter(p => p.url).map((p, i) => ({
+              id: `reopen-${i}`,
+              name: p.name.replace(/_/g, ' ').replace('.pdf', ''),
+              pdfUrl: p.url!,
+            }))
+          );
+        } else {
+          setLoadedDocs(DEFAULT_DOCUMENTS);
+        }
+        setAppState('annotating');
+      })
+      .catch(() => {
+        setLoadedDocs(DEFAULT_DOCUMENTS);
+        setAppState('annotating');
+      });
+  }
 
   const handleSaveAndAnalyze = useCallback(async (data: SaveAndAnalyzeData) => {
     try {
@@ -183,6 +213,17 @@ export default function ScanPage() {
     setAnalysisProgress(null);
   }, []);
 
+  if (appState === 'loading') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-gray-500">Loading document...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (appState === 'error') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -216,9 +257,11 @@ export default function ScanPage() {
     );
   }
 
+  const documents = loadedDocs ?? DEFAULT_DOCUMENTS;
+
   return (
     <MultiDocumentAnnotator
-      documents={documentId ? [] : DEFAULT_DOCUMENTS}
+      documents={documents}
       onSaveAndAnalyze={handleSaveAndAnalyze}
       isAnalyzing={appState === 'analyzing'}
       analysisProgress={analysisProgress || undefined}
