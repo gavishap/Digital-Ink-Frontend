@@ -45,7 +45,12 @@ const ACTION_LABELS: Record<string, string> = {
   reanalysis_started: 'Re-analysis started',
 };
 
-function PdfViewer({ pdfs }: { pdfs: PdfFile[] }) {
+interface PageImage {
+  page_number: number;
+  image_url: string | null;
+}
+
+function PdfViewer({ pdfs, pages }: { pdfs: PdfFile[]; pages?: PageImage[] }) {
   const [activePdf, setActivePdf] = useState(0);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -69,10 +74,37 @@ function PdfViewer({ pdfs }: { pdfs: PdfFile[] }) {
     return () => { if (revoke) URL.revokeObjectURL(revoke); };
   }, [currentPdf?.url]);
 
+  const validPages = pages?.filter(p => p.image_url) ?? [];
+
+  if (pdfs.length === 0 && validPages.length > 0) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+          <span className="text-sm font-medium text-gray-700">Scanned Pages</span>
+          <span className="text-xs text-gray-400">{validPages.length} pages</span>
+        </div>
+        <div className="overflow-y-auto space-y-4 p-4 bg-gray-50" style={{ maxHeight: '70vh' }}>
+          {validPages.map((p) => (
+            <div key={p.page_number} className="relative">
+              <span className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full z-10">
+                Page {p.page_number}
+              </span>
+              <img
+                src={p.image_url!}
+                alt={`Page ${p.page_number}`}
+                className="w-full rounded-lg shadow-sm border border-gray-200"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (pdfs.length === 0) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-400 text-sm">
-        No PDF documents saved for this record.
+        No documents saved for this record.
       </div>
     );
   }
@@ -285,8 +317,9 @@ export default function DocumentDetailPage() {
   const auditLog = data.audit_log ?? [];
   const relatedDocs = data.related_documents ?? [];
 
+  const viewablePages = (data.pages ?? []).filter(p => p.image_url);
   const tabs: { key: Tab; label: string; count: number }[] = [
-    { key: 'viewer', label: 'Document', count: pdfs.length },
+    { key: 'viewer', label: 'Document', count: pdfs.length || viewablePages.length },
     { key: 'results', label: 'Extracted Data', count: results.length },
     { key: 'reports', label: 'Reports', count: reports.length },
     { key: 'history', label: 'History', count: auditLog.length },
@@ -364,7 +397,7 @@ export default function DocumentDetailPage() {
       </div>
 
       {/* Tab: PDF Viewer */}
-      {tab === 'viewer' && <PdfViewer pdfs={pdfs} />}
+      {tab === 'viewer' && <PdfViewer pdfs={pdfs} pages={data.pages} />}
 
       {/* Tab: Extracted Data */}
       {tab === 'results' && <ExtractionResultsPanel results={results} />}

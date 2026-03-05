@@ -121,16 +121,17 @@ export default function ScanPage() {
       }
 
       if (totalPages === 0) {
-        setError('No pages have been annotated. Please draw on at least one page before analyzing.');
+        setError('No document pages found. Please ensure documents are loaded.');
         setAppState('error');
         return;
       }
 
       setAnalysisProgress({ current: 0, total: totalPages, percentage: 0, stage: 'Uploading to AI engine...' });
 
-      const { job_id, document_id } = await analyzeDocumentImages(allBlobs, {
+      const { job_id, document_id: newDocId } = await analyzeDocumentImages(allBlobs, {
         name: 'Patient Forms - Combined',
         pageMetadata,
+        parentDocumentId: documentId || undefined,
       });
 
       if (completePdfs.length > 0) {
@@ -141,7 +142,7 @@ export default function ScanPage() {
               documentName: pdf.documentName,
               blob: pdf.blob,
             })),
-            { jobId: job_id, documentId: document_id },
+            { jobId: job_id, documentId: newDocId },
           );
         } catch (saveErr) {
           console.error('[PDF SAVE] Error saving PDFs:', saveErr);

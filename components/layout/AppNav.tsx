@@ -26,106 +26,84 @@ export function AppNav() {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-200/60">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between h-14">
-          <div className="flex items-center gap-1">
-            <Link href="/" className="flex items-center gap-2 mr-6">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center">
-                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+    <nav className="fixed top-0 left-0 right-0 z-50 h-[56px] bg-white border-b border-gray-200">
+      <div className="h-full max-w-7xl mx-auto px-6 flex items-center justify-between">
+
+        {/* Left: logo */}
+        <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
+          <div className="w-[30px] h-[30px] rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm shadow-blue-400/50 transition-transform duration-200 group-hover:scale-105 group-active:scale-95">
+            <svg className="w-[15px] h-[15px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          </div>
+          <span className="font-semibold text-[15px] text-gray-900 tracking-tight">Digital Ink</span>
+        </Link>
+
+        {/* Center: nav links — underline style, no background boxes */}
+        <div className="hidden sm:flex items-center h-full gap-6">
+          {[...NAV_ITEMS, ...(role === 'admin' ? ADMIN_ITEMS : [])].map((item) => {
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`
+                  relative flex items-center gap-2 px-1 h-full text-[13.5px] font-medium
+                  transition-colors duration-150 select-none
+                  ${active ? 'text-gray-900' : 'text-gray-400 hover:text-gray-700'}
+                `}
+              >
+                <svg className="w-[15px] h-[15px] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={active ? 2 : 1.75}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
                 </svg>
-              </div>
-              <span className="font-bold text-gray-900 text-lg tracking-tight">Digital Ink</span>
-            </Link>
+                {item.label}
+                {/* Active underline */}
+                {active && (
+                  <span className="absolute bottom-0 left-0 right-0 h-[2px] rounded-t-full bg-blue-500" />
+                )}
+              </Link>
+            );
+          })}
+        </div>
 
-            <div className="hidden sm:flex items-center gap-0.5">
-              {NAV_ITEMS.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                    isActive(item.href)
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
-                  </svg>
-                  {item.label}
-                </Link>
-              ))}
-              {role === 'admin' && ADMIN_ITEMS.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                    isActive(item.href)
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
-                  </svg>
-                  {item.label}
-                </Link>
-              ))}
+        {/* Right: user pill + sign out */}
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="hidden sm:flex items-center gap-2.5 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
+            <div className="w-[22px] h-[22px] rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center shrink-0">
+              <span className="text-[10px] font-bold text-white leading-none">{(user.email?.[0] ?? '?').toUpperCase()}</span>
             </div>
+            <span className="text-[13px] text-gray-600 max-w-[160px] truncate">{user.email}</span>
           </div>
-
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
-                <span className="text-xs font-bold text-white">{(user.email?.[0] ?? '?').toUpperCase()}</span>
-              </div>
-              <span className="text-sm text-gray-600 max-w-[160px] truncate">{user.email}</span>
-            </div>
-            <button
-              onClick={signOut}
-              className="text-sm text-gray-500 hover:text-red-600 transition-colors px-2 py-1 rounded-md hover:bg-red-50"
-            >
-              Sign Out
-            </button>
-          </div>
+          <button
+            onClick={signOut}
+            className="text-[13px] font-medium text-gray-400 hover:text-gray-700 transition-colors duration-150 px-3 py-1.5 rounded-lg border border-transparent hover:border-gray-200 hover:bg-gray-50 active:scale-[0.97]"
+          >
+            Sign Out
+          </button>
         </div>
       </div>
 
       {/* Mobile nav */}
-      <div className="sm:hidden border-t border-gray-100 px-2 py-1.5 flex gap-1 overflow-x-auto">
-        {NAV_ITEMS.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-              isActive(item.href)
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-gray-500 hover:text-gray-900'
-            }`}
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
-            </svg>
-            {item.label}
-          </Link>
-        ))}
-        {role === 'admin' && ADMIN_ITEMS.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-              isActive(item.href)
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-gray-500 hover:text-gray-900'
-            }`}
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
-            </svg>
-            {item.label}
-          </Link>
-        ))}
+      <div className="sm:hidden border-t border-gray-100 px-4 flex gap-1 overflow-x-auto h-10 items-center">
+        {[...NAV_ITEMS, ...(role === 'admin' ? ADMIN_ITEMS : [])].map((item) => {
+          const active = isActive(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`
+                flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium whitespace-nowrap
+                transition-colors duration-150
+                ${active ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100'}
+              `}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+              </svg>
+              {item.label}
+            </Link>
+          );
+        })}
       </div>
     </nav>
   );

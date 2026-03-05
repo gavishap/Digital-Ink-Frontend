@@ -186,11 +186,11 @@ export async function analyzeDocumentImages(
     name?: string;
     schemaPath?: string;
     pageMetadata?: PageMetadata[];
+    parentDocumentId?: string;
   }
 ): Promise<AnalyzeResponse> {
   const formData = new FormData();
   
-  // Append each page blob as a separate file with document info in filename
   pageBlobs.forEach((blob, index) => {
     const metadata = options?.pageMetadata?.[index];
     const filename = metadata 
@@ -206,9 +206,11 @@ export async function analyzeDocumentImages(
   if (options?.schemaPath) {
     formData.append('schema_path', options.schemaPath);
   }
-  // Send page metadata as JSON
   if (options?.pageMetadata) {
     formData.append('page_metadata', JSON.stringify(options.pageMetadata));
+  }
+  if (options?.parentDocumentId) {
+    formData.append('parent_document_id', options.parentDocumentId);
   }
   
   const response = await fetch(`${API_BASE_URL}/api/analyze-images`, {

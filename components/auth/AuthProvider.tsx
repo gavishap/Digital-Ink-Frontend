@@ -28,7 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <>
       <AppNav />
-      <main className="pt-14 sm:pt-14 min-h-screen bg-gray-50">{children}</main>
+      <main className="min-h-screen bg-gray-50" style={{ paddingTop: 56 }}>{children}</main>
     </>
   );
 }
