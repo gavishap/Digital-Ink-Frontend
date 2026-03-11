@@ -711,7 +711,7 @@ export async function POST(request: NextRequest) {
     const filename = `${results.form_name}_findings_report.docx`;
 
     // Persist report to backend (blocking — must succeed before returning)
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
     const supabase = await createClient();
     const { data: { session } } = await supabase.auth.getSession();
     const headers: HeadersInit = {};

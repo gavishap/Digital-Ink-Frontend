@@ -1,6 +1,6 @@
 import { createClient } from '../supabase/client';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
 
 async function authHeaders(token?: string): Promise<HeadersInit> {
   if (token) return { Authorization: `Bearer ${token}` };
