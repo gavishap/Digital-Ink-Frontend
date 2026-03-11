@@ -710,36 +710,30 @@ export async function POST(request: NextRequest) {
     const buffer = new Uint8Array(rawBuffer);
     const filename = `${results.form_name}_findings_report.docx`;
 
-    // Persist report to backend (Supabase Storage + reports table)
+    // Persist report to backend (blocking — must succeed before returning)
     const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-    try {
-      const supabase = await createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      const headers: HeadersInit = {};
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`;
-      }
-
-      const formData = new FormData();
-      formData.append('file', new Blob([buffer], {
-        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      }), filename);
-      if (results.form_id) {
-        formData.append('document_id', results.form_id);
-      }
-
-      await fetch(`${API_BASE}/api/reports`, { method: 'POST', headers, body: formData });
-    } catch (e) {
-      console.warn('Failed to persist report to backend (non-blocking):', e);
+    const supabase = await createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    const headers: HeadersInit = {};
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
     }
 
-    return new NextResponse(buffer, {
-      headers: {
-        'Content-Type':
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'Content-Disposition': `attachment; filename="${filename}"`,
-      },
-    });
+    const formData = new FormData();
+    formData.append('file', new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    }), filename);
+    if (results.form_id) {
+      formData.append('document_id', results.form_id);
+    }
+
+    const persistRes = await fetch(`${API_BASE}/api/reports`, { method: 'POST', headers, body: formData });
+    if (!persistRes.ok) {
+      return NextResponse.json({ error: 'Failed to persist report' }, { status: 500 });
+    }
+    const { report_id, storage_path } = await persistRes.json();
+
+    return NextResponse.json({ report_id, storage_path });
   } catch (error) {
     console.error('Error generating report:', error);
     return NextResponse.json(

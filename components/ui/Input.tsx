@@ -12,26 +12,25 @@ export function Input({ label, error, required, className = '', ...props }: Inpu
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-slate-700 mb-1.5 font-display">
           {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
+          {required && <span className="text-rose-500 ml-1">*</span>}
         </label>
       )}
       <input
         className={`
           w-full px-4 py-3 text-base
-          border rounded-lg
-          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-          ${error ? 'border-red-500' : 'border-gray-300'}
+          bg-white border rounded-xl
+          transition-all duration-200
+          placeholder:text-slate-400
+          focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500
+          ${error ? 'border-rose-400 focus:ring-rose-500/30 focus:border-rose-500' : 'border-slate-200 hover:border-slate-300'}
           ${className}
         `}
-        style={{ fontSize: '16px' }} // Prevent iOS zoom
+        style={{ fontSize: '16px' }}
         {...props}
       />
-      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-1.5 text-sm text-rose-600">{error}</p>}
     </div>
   );
 }
-
-
-

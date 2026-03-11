@@ -187,6 +187,7 @@ export async function analyzeDocumentImages(
     schemaPath?: string;
     pageMetadata?: PageMetadata[];
     parentDocumentId?: string;
+    patientId?: string;
   }
 ): Promise<AnalyzeResponse> {
   const formData = new FormData();
@@ -211,6 +212,9 @@ export async function analyzeDocumentImages(
   }
   if (options?.parentDocumentId) {
     formData.append('parent_document_id', options.parentDocumentId);
+  }
+  if (options?.patientId) {
+    formData.append('patient_id', options.patientId);
   }
   
   const response = await fetch(`${API_BASE_URL}/api/analyze-images`, {
@@ -383,4 +387,54 @@ export async function listExtractions(): Promise<{ job_id: string; name: string;
   
   const data = await response.json();
   return data.extractions;
+}
+
+export interface ClinicalReportResult {
+  report_id: string;
+  storage_path: string;
+  filename: string;
+}
+
+/**
+ * Generate a clinical narrative DOCX from extraction results using learned rules.
+ */
+export async function generateClinicalReport(params: {
+  job_id?: string;
+  document_id?: string;
+}): Promise<ClinicalReportResult> {
+  const response = await fetch(`${API_BASE_URL}/api/generate-clinical-report`, {
+    method: 'POST',
+    headers: {
+      ...(await authHeaders()),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      job_id: params.job_id,
+      document_id: params.document_id,
+      report_type: 'clinical_report',
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ detail: 'Unknown error' }));
+    throw new Error(err.detail || 'Failed to generate clinical report');
+  }
+
+  return response.json();
+}
+
+/**
+ * Get a signed download URL for a report.
+ */
+export async function getReportDownloadUrl(reportId: string): Promise<string> {
+  const response = await fetch(`${API_BASE_URL}/api/reports/${reportId}/download`, {
+    headers: await authHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to get report download URL');
+  }
+
+  const data = await response.json();
+  return data.download_url;
 }

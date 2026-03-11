@@ -6,6 +6,8 @@ import {
   analyzeDocument,
   pollJobStatus,
   getResults,
+  generateClinicalReport,
+  getReportDownloadUrl,
   type JobStatus,
   type ExtractionResult,
 } from '@/lib/api/extraction';
@@ -76,36 +78,25 @@ export default function AnalyzePage() {
     }
   }, [file]);
 
-  // Generate DOCX report
+  // Generate clinical DOCX report
   const handleGenerateReport = useCallback(async () => {
     if (!results) return;
 
     try {
       setIsGeneratingReport(true);
 
-      // Call the report generation API
-      const response = await fetch('/api/generate-report', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(results),
+      const { report_id } = await generateClinicalReport({
+        document_id: results.form_id || undefined,
+        job_id: results.form_name || undefined,
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to generate report');
-      }
-
-      // Download the file
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
+      const downloadUrl = await getReportDownloadUrl(report_id);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `${results.form_name}_findings_report.docx`;
+      a.href = downloadUrl;
+      a.download = `${results.form_name}_clinical_report.docx`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate report');
     } finally {

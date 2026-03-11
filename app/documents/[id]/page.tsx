@@ -10,6 +10,8 @@ import {
   type DocumentDetail,
   type PdfFile,
 } from '@/lib/api/documents';
+import { getReportDownloadUrl } from '@/lib/api/patients';
+import { generateClinicalReport } from '@/lib/api/extraction';
 
 type Tab = 'viewer' | 'results' | 'reports' | 'history';
 
@@ -252,30 +254,38 @@ export default function DocumentDetailPage() {
     }
   };
 
-  const handleDownloadReport = async () => {
+  const [generating, setGenerating] = useState(false);
+
+  const handleGenerateReport = async () => {
     if (!data) return;
+    setGenerating(true);
     try {
-      const response = await fetch('/api/generate-report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          form_id: docId,
-          form_name: data.document.file_name,
-          pages: data.latest_results,
-        }),
-      });
-      if (!response.ok) throw new Error('Failed');
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `report_${docId.slice(0, 8)}.docx`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      await generateClinicalReport({ document_id: docId });
+      await load();
+      setTab('reports');
     } catch {
-      setError('Failed to download report');
+      setError('Failed to generate report');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleReportDownload = async (reportId: string) => {
+    try {
+      const { download_url } = await getReportDownloadUrl(reportId);
+      window.open(download_url, '_blank');
+    } catch {
+      setError('Failed to get download link');
+    }
+  };
+
+  const handleReportPrint = async (reportId: string) => {
+    try {
+      const { download_url } = await getReportDownloadUrl(reportId);
+      const w = window.open(download_url, '_blank');
+      if (w) w.addEventListener('load', () => w.print());
+    } catch {
+      setError('Failed to open for printing');
     }
   };
 
@@ -356,7 +366,7 @@ export default function DocumentDetailPage() {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <Link
-              href={`/scan?documentId=${docId}`}
+              href={`/scan?documentId=${docId}${doc.patient_id ? `&patientId=${doc.patient_id}` : ''}`}
               className="px-3.5 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Re-open & Edit
@@ -405,17 +415,20 @@ export default function DocumentDetailPage() {
       {/* Tab: Reports */}
       {tab === 'reports' && (
         <div className="space-y-3">
+          {results.length > 0 && (
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={handleGenerateReport}
+                disabled={generating}
+                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {generating ? 'Generating...' : 'Generate New Report'}
+              </button>
+            </div>
+          )}
           {reports.length === 0 ? (
             <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-              <p className="text-gray-400 text-sm mb-3">No reports generated yet</p>
-              {results.length > 0 && (
-                <button
-                  onClick={handleDownloadReport}
-                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Generate Report
-                </button>
-              )}
+              <p className="text-gray-400 text-sm">No reports generated yet</p>
             </div>
           ) : (
             reports.map((r) => (
@@ -426,15 +439,26 @@ export default function DocumentDetailPage() {
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5">Generated {formatDate(r.created_at)}</p>
                 </div>
-                <button
-                  onClick={handleDownloadReport}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Download
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleReportDownload(r.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download
+                  </button>
+                  <button
+                    onClick={() => handleReportPrint(r.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m0 0a48.159 48.159 0 018.5 0m-8.5 0V6.375a2.25 2.25 0 012.25-2.25h3.5a2.25 2.25 0 012.25 2.25V6.7" />
+                    </svg>
+                    Print
+                  </button>
+                </div>
               </div>
             ))
           )}

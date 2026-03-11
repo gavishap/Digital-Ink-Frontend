@@ -1,17 +1,17 @@
 'use client';
 
 import React, { useState, useCallback, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { MultiDocumentAnnotator } from '@/components/pdf/MultiDocumentAnnotator';
-import { AnalysisResultsView } from '@/components/document/AnalysisResultsView';
 import { getDocumentDetail } from '@/lib/api/documents';
 import {
   analyzeDocumentImages,
   pollJobStatus,
   getResults,
   saveAnnotatedPdfs,
-  type ExtractionResult,
+  generateClinicalReport,
   type JobStatus,
 } from '@/lib/api/extraction';
 
@@ -28,7 +28,7 @@ const DEFAULT_DOCUMENTS = [
   },
 ];
 
-type AppState = 'loading' | 'annotating' | 'analyzing' | 'results' | 'error';
+type AppState = 'loading' | 'annotating' | 'analyzing' | 'error';
 
 interface AnnotatedPage {
   pageNumber: number;
@@ -56,9 +56,16 @@ interface PageMetadata {
 
 export default function ScanPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const documentId = searchParams.get('documentId');
+  const patientId = searchParams.get('patientId');
   const { session } = useAuth();
   const token = session?.access_token;
+
+  const patientIdRef = useRef(patientId);
+  patientIdRef.current = patientId;
+  const documentIdRef = useRef(documentId);
+  documentIdRef.current = documentId;
 
   const [appState, setAppState] = useState<AppState>(documentId ? 'loading' : 'annotating');
   const [loadedDocs, setLoadedDocs] = useState<{ id: string; name: string; pdfUrl: string }[] | null>(null);
@@ -68,9 +75,7 @@ export default function ScanPage() {
     percentage: number;
     stage?: string;
   } | null>(null);
-  const [results, setResults] = useState<ExtractionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isDownloading, setIsDownloading] = useState(false);
   const fetchRef = useRef(false);
 
   if (documentId && token && !fetchRef.current) {
@@ -131,7 +136,8 @@ export default function ScanPage() {
       const { job_id, document_id: newDocId } = await analyzeDocumentImages(allBlobs, {
         name: 'Patient Forms - Combined',
         pageMetadata,
-        parentDocumentId: documentId || undefined,
+        parentDocumentId: documentIdRef.current || undefined,
+        patientId: patientIdRef.current || undefined,
       });
 
       if (completePdfs.length > 0) {
@@ -167,52 +173,54 @@ export default function ScanPage() {
         throw new Error(finalStatus.message || 'Analysis failed');
       }
 
-      setAnalysisProgress({ current: totalPages, total: totalPages, percentage: 100, stage: 'Retrieving results...' });
-      const extractionResults = await getResults(job_id);
+      setAnalysisProgress({ current: totalPages, total: totalPages, percentage: 100, stage: 'Generating report...' });
 
-      setResults(extractionResults);
-      setAppState('results');
+      try {
+        await generateClinicalReport({ job_id });
+      } catch (reportErr) {
+        console.error('Auto-report generation failed (non-blocking):', reportErr);
+      }
+
+      const pid = patientIdRef.current;
+      if (pid) {
+        router.push(`/patients/${pid}`);
+      } else {
+        router.push('/');
+      }
     } catch (err) {
       console.error('Analysis error:', err);
       setError(err instanceof Error ? err.message : 'Analysis failed');
       setAppState('error');
     }
-  }, []);
-
-  const handleDownloadReport = useCallback(async () => {
-    if (!results) return;
-    setIsDownloading(true);
-    try {
-      const response = await fetch('/api/generate-report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(results),
-      });
-      if (!response.ok) throw new Error('Failed to generate report');
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${results.form_name || 'findings'}_report.docx`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Download error:', err);
-      setError('Failed to download report');
-    } finally {
-      setIsDownloading(false);
-    }
-  }, [results]);
+  }, [router]);
 
   const handleStartOver = useCallback(() => {
     setAppState('annotating');
-    setResults(null);
     setError(null);
     setAnalysisProgress(null);
   }, []);
+
+  if (!patientId && !documentId) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Patient Required</h2>
+          <p className="text-gray-600 mb-6">Please select a patient first before starting a new scan.</p>
+          <Link
+            href="/"
+            className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+          >
+            Go to Patients
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (appState === 'loading') {
     return (
@@ -244,17 +252,6 @@ export default function ScanPage() {
           </button>
         </div>
       </div>
-    );
-  }
-
-  if (appState === 'results' && results) {
-    return (
-      <AnalysisResultsView
-        results={results}
-        onDownloadReport={handleDownloadReport}
-        onStartOver={handleStartOver}
-        isDownloading={isDownloading}
-      />
     );
   }
 
