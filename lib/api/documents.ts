@@ -43,6 +43,12 @@ export interface RelatedDocument {
   created_at: string;
 }
 
+export interface DocumentPage {
+  page_number: number;
+  image_url: string | null;
+  schema_page_id: string | null;
+}
+
 export interface DocumentDetail {
   document: {
     id: string;
