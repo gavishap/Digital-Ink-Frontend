@@ -135,6 +135,7 @@ export default function ScanPage() {
 
       const { job_id, document_id: newDocId } = await analyzeDocumentImages(allBlobs, {
         name: 'Patient Forms - Combined',
+        schemaPath: 'templates/orofacial_exam_schema.json',
         pageMetadata,
         parentDocumentId: documentIdRef.current || undefined,
         patientId: patientIdRef.current || undefined,
