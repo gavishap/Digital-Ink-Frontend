@@ -450,15 +450,27 @@ export type Database = {
           case_number: string | null
           chief_complaint: string | null
           chronic_conditions: string | null
+          claim_number: string | null
+          claims_admin_address: string | null
+          claims_admin_city: string | null
+          claims_admin_name: string | null
+          claims_admin_phone: string | null
+          claims_admin_state: string | null
+          claims_admin_zip: string | null
           created_at: string | null
           current_medications: string | null
+          employer_address: string | null
+          employer_city: string | null
           employer_name: string | null
+          employer_state: string | null
+          employer_zip: string | null
           family_history: string | null
           id: string
           injury_cause: string | null
           injury_date: string | null
           injury_description: string | null
           injury_location: string | null
+          interpreter_language: string | null
           occupation: string | null
           pain_level: number | null
           past_surgeries: string | null
@@ -466,6 +478,7 @@ export type Database = {
           symptom_description: string | null
           symptom_onset_date: string | null
           updated_at: string | null
+          wcab_venue: string | null
         }
         Insert: {
           allergies?: string | null
@@ -475,15 +488,27 @@ export type Database = {
           case_number?: string | null
           chief_complaint?: string | null
           chronic_conditions?: string | null
+          claim_number?: string | null
+          claims_admin_address?: string | null
+          claims_admin_city?: string | null
+          claims_admin_name?: string | null
+          claims_admin_phone?: string | null
+          claims_admin_state?: string | null
+          claims_admin_zip?: string | null
           created_at?: string | null
           current_medications?: string | null
+          employer_address?: string | null
+          employer_city?: string | null
           employer_name?: string | null
+          employer_state?: string | null
+          employer_zip?: string | null
           family_history?: string | null
           id?: string
           injury_cause?: string | null
           injury_date?: string | null
           injury_description?: string | null
           injury_location?: string | null
+          interpreter_language?: string | null
           occupation?: string | null
           pain_level?: number | null
           past_surgeries?: string | null
@@ -491,6 +516,7 @@ export type Database = {
           symptom_description?: string | null
           symptom_onset_date?: string | null
           updated_at?: string | null
+          wcab_venue?: string | null
         }
         Update: {
           allergies?: string | null
@@ -500,15 +526,27 @@ export type Database = {
           case_number?: string | null
           chief_complaint?: string | null
           chronic_conditions?: string | null
+          claim_number?: string | null
+          claims_admin_address?: string | null
+          claims_admin_city?: string | null
+          claims_admin_name?: string | null
+          claims_admin_phone?: string | null
+          claims_admin_state?: string | null
+          claims_admin_zip?: string | null
           created_at?: string | null
           current_medications?: string | null
+          employer_address?: string | null
+          employer_city?: string | null
           employer_name?: string | null
+          employer_state?: string | null
+          employer_zip?: string | null
           family_history?: string | null
           id?: string
           injury_cause?: string | null
           injury_date?: string | null
           injury_description?: string | null
           injury_location?: string | null
+          interpreter_language?: string | null
           occupation?: string | null
           pain_level?: number | null
           past_surgeries?: string | null
@@ -516,6 +554,7 @@ export type Database = {
           symptom_description?: string | null
           symptom_onset_date?: string | null
           updated_at?: string | null
+          wcab_venue?: string | null
         }
         Relationships: [
           {

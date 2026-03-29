@@ -115,3 +115,47 @@ export async function getReportDownloadUrl(reportId: string): Promise<{ report_i
   if (!response.ok) throw new Error('Failed to get report download URL');
   return response.json();
 }
+
+
+// =============================================================================
+// Case Info (Workers' Comp case demographics)
+// =============================================================================
+
+export interface CaseInfoData {
+  claim_number?: string;
+  wcab_venue?: string;
+  case_number?: string;
+  injury_date?: string;
+  interpreter_language?: string;
+  employer_name?: string;
+  occupation?: string;
+  employer_address?: string;
+  employer_city?: string;
+  employer_state?: string;
+  employer_zip?: string;
+  claims_admin_name?: string;
+  claims_admin_address?: string;
+  claims_admin_city?: string;
+  claims_admin_state?: string;
+  claims_admin_zip?: string;
+  claims_admin_phone?: string;
+}
+
+export async function saveCaseInfo(
+  patientId: string,
+  data: CaseInfoData,
+): Promise<{ status: string; patient_id: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/patients/${patientId}/case-info`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(await authHeaders()),
+    },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ detail: 'Unknown error' }));
+    throw new Error(err.detail || 'Failed to save case info');
+  }
+  return response.json();
+}
