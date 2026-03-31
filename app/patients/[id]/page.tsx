@@ -1,16 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useState, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import {
   getPatientDetail,
   getReportDownloadUrl,
+  saveCaseInfo,
   type PatientDetail,
   type PatientDocument,
   type PatientReport,
+  type CaseInfoData,
 } from '@/lib/api/patients';
+import { CaseInfoForm } from '@/components/forms/CaseInfoForm';
 import { getStatusStyle, formatDate, formatDateLong } from '@/lib/design';
 
 export default function PatientDetailPage() {
@@ -18,8 +21,11 @@ export default function PatientDetailPage() {
   const params = useParams();
   const patientId = params.id as string;
 
+  const router = useRouter();
   const [data, setData] = useState<PatientDetail | null>(null);
   const [error, setError] = useState('');
+  const [showCaseInfo, setShowCaseInfo] = useState(false);
+  const [savingCase, setSavingCase] = useState(false);
   const fetchRef = useRef(false);
 
   const load = useCallback(async () => {
@@ -60,6 +66,19 @@ export default function PatientDetailPage() {
 
   const { patient, documents, reports } = data;
   const fullName = `${patient.first_name} ${patient.last_name}`;
+
+  const handleCaseInfoSubmit = async (caseData: CaseInfoData) => {
+    setSavingCase(true);
+    try {
+      await saveCaseInfo(patientId, caseData);
+      setShowCaseInfo(false);
+      router.push(`/scan?patientId=${patientId}`);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Failed to save case info');
+    } finally {
+      setSavingCase(false);
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
@@ -102,15 +121,15 @@ export default function PatientDetailPage() {
               </div>
             </div>
           </div>
-          <Link
-            href={`/scan?patientId=${patientId}`}
+          <button
+            onClick={() => setShowCaseInfo(true)}
             className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 text-white text-sm font-medium rounded-xl shadow-soft hover:shadow-glow hover:from-primary-700 hover:to-primary-800 transition-all duration-300 active:scale-[0.97] shrink-0"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
-            New Scan
-          </Link>
+            New Exam
+          </button>
         </div>
       </div>
 
@@ -121,6 +140,30 @@ export default function PatientDetailPage() {
       {/* Reports */}
       <h2 className="text-lg font-display font-semibold text-slate-900 mt-10 mb-3 animate-slide-up stagger-4">Reports</h2>
       <ReportsList reports={reports} />
+
+      {/* Case Info Modal */}
+      {showCaseInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowCaseInfo(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 animate-slide-up">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-display font-bold text-slate-900">Case Information</h2>
+                <p className="text-sm text-slate-500 mt-1">Enter the case details before starting the exam scan.</p>
+              </div>
+              <button
+                onClick={() => setShowCaseInfo(false)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-surface-100 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <CaseInfoForm onSubmit={handleCaseInfoSubmit} loading={savingCase} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
