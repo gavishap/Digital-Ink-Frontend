@@ -129,6 +129,7 @@ export interface CaseInfoData {
   exam_date?: string;
   interpreter_language?: string;
   patient_sex?: string;
+  patient_ss_last4?: string;
   employer_name?: string;
   occupation?: string;
   patient_address?: string;

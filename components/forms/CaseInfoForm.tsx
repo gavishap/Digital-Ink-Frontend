@@ -75,6 +75,7 @@ export function CaseInfoForm({ initialData, onSubmit, loading }: CaseInfoFormPro
         <h3 className="text-lg font-semibold text-slate-800 mb-4 font-display">Patient Demographics</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Select label="Sex" value={form.patient_sex ?? ''} onChange={set('patient_sex')} options={[{ value: '', label: 'Select...' }, { value: 'M', label: 'Male' }, { value: 'F', label: 'Female' }]} />
+          <Input label="SS (last 4 digits)" value={form.patient_ss_last4 ?? ''} onChange={set('patient_ss_last4')} placeholder="e.g. 6500" maxLength={4} />
           <Input label="Occupation" value={form.occupation ?? ''} onChange={set('occupation')} />
           <Input label="Address" value={form.patient_address ?? ''} onChange={set('patient_address')} className="md:col-span-2" />
           <Input label="City" value={form.patient_city ?? ''} onChange={set('patient_city')} />
