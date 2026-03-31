@@ -65,8 +65,23 @@ export function CaseInfoForm({ initialData, onSubmit, loading }: CaseInfoFormPro
           <Input label="Claim Number" value={form.claim_number ?? ''} onChange={set('claim_number')} placeholder="e.g. 2080391856" />
           <Input label="WCAB Venue" value={form.wcab_venue ?? ''} onChange={set('wcab_venue')} placeholder="e.g. POM" />
           <Input label="Case #" value={form.case_number ?? ''} onChange={set('case_number')} placeholder="e.g. ADJ17023256" />
-          <Input label="Date of Injury" type="date" value={form.injury_date ?? ''} onChange={set('injury_date')} />
+          <Input label="Date of Injury" value={form.injury_date ?? ''} onChange={set('injury_date')} placeholder="e.g. CT 1/1/10 to 2/28/23" />
+          <Input label="Date of Current Exam" type="date" value={form.exam_date ?? ''} onChange={set('exam_date')} />
           <Input label="Interpreter Language" value={form.interpreter_language ?? ''} onChange={set('interpreter_language')} placeholder="Leave blank if none" />
+        </div>
+      </section>
+
+      <section>
+        <h3 className="text-lg font-semibold text-slate-800 mb-4 font-display">Patient Demographics</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Select label="Sex" value={form.patient_sex ?? ''} onChange={set('patient_sex')} options={[{ value: '', label: 'Select...' }, { value: 'M', label: 'Male' }, { value: 'F', label: 'Female' }]} />
+          <Input label="Occupation" value={form.occupation ?? ''} onChange={set('occupation')} />
+          <Input label="Address" value={form.patient_address ?? ''} onChange={set('patient_address')} className="md:col-span-2" />
+          <Input label="City" value={form.patient_city ?? ''} onChange={set('patient_city')} />
+          <div className="grid grid-cols-2 gap-4">
+            <Select label="State" value={form.patient_state ?? ''} onChange={set('patient_state')} options={[{ value: '', label: 'Select...' }, ...usStates]} />
+            <Input label="Zip" value={form.patient_zip ?? ''} onChange={set('patient_zip')} />
+          </div>
         </div>
       </section>
 
@@ -74,7 +89,6 @@ export function CaseInfoForm({ initialData, onSubmit, loading }: CaseInfoFormPro
         <h3 className="text-lg font-semibold text-slate-800 mb-4 font-display">Employer</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input label="Employer Name" value={form.employer_name ?? ''} onChange={set('employer_name')} />
-          <Input label="Occupation" value={form.occupation ?? ''} onChange={set('occupation')} />
           <Input label="Employer Address" value={form.employer_address ?? ''} onChange={set('employer_address')} className="md:col-span-2" />
           <Input label="City" value={form.employer_city ?? ''} onChange={set('employer_city')} />
           <div className="grid grid-cols-2 gap-4">
@@ -104,7 +118,7 @@ export function CaseInfoForm({ initialData, onSubmit, loading }: CaseInfoFormPro
           disabled={loading}
           className="px-8 py-3 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? 'Saving...' : 'Save Case Info'}
+          {loading ? 'Saving...' : 'Save & Start Exam'}
         </button>
       </div>
     </form>

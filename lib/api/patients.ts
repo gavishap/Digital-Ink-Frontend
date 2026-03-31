@@ -126,9 +126,15 @@ export interface CaseInfoData {
   wcab_venue?: string;
   case_number?: string;
   injury_date?: string;
+  exam_date?: string;
   interpreter_language?: string;
+  patient_sex?: string;
   employer_name?: string;
   occupation?: string;
+  patient_address?: string;
+  patient_city?: string;
+  patient_state?: string;
+  patient_zip?: string;
   employer_address?: string;
   employer_city?: string;
   employer_state?: string;
